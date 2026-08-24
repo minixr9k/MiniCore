@@ -16,6 +16,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 public class NetworkServer {
     private final int port;
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
 
     public NetworkServer(int port) {
         this.port = port;
@@ -27,8 +29,8 @@ public class NetworkServer {
         System.out.println("[Core/Network] Ивент-луп выбран: " + (useEpoll ? "Epoll (Linux Native)" : "NIO (Java)"));
 
         // 1. Создаем группы потоков в зависимости от ОС
-        EventLoopGroup bossGroup = useEpoll ? new EpollEventLoopGroup(1) : new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = useEpoll ? new EpollEventLoopGroup(4) : new NioEventLoopGroup(4);
+        bossGroup = useEpoll ? new EpollEventLoopGroup(1) : new NioEventLoopGroup(1);
+        workerGroup = useEpoll ? new EpollEventLoopGroup(4) : new NioEventLoopGroup(4);
 
         try {
             ServerBootstrap b = new ServerBootstrap();
@@ -45,12 +47,18 @@ public class NetworkServer {
 
             ChannelFuture f = b.bind(port).sync();
             System.out.println("[Core/Done] Server bound to port " + port);
-            f.channel().closeFuture().sync();
+//            f.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             e.printStackTrace();
-        } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
         }
+//        finally {
+//            workerGroup.shutdownGracefully();
+//            bossGroup.shutdownGracefully();
+//        }
+    }
+
+    public void stop() {
+        if (workerGroup != null) workerGroup.shutdownGracefully();
+        if (bossGroup != null) bossGroup.shutdownGracefully();
     }
 }

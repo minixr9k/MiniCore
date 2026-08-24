@@ -1,5 +1,6 @@
 package dev.minixr9k.features;
 
+import dev.minixr9k.MiniCore;
 import dev.minixr9k.api.chunk.Chunk;
 import dev.minixr9k.api.chunk.ZRegionChunkManager;
 import dev.minixr9k.auth.PlayerProfile;
@@ -16,8 +17,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class World {
-
-    public static final ScheduledExecutorService CHUNK_STREAMER = Executors.newScheduledThreadPool(2);
 
     private static final List<Player> players = new CopyOnWriteArrayList<>();
     private static final List<Entity> entities = new CopyOnWriteArrayList<>();
@@ -54,22 +53,16 @@ public class World {
         AtomicInteger index = new AtomicInteger(0);
         int chunksPerBatch = 4;
 
-        final ScheduledFuture<?>[] taskHolder = new ScheduledFuture<?>[1];
-
-        taskHolder[0] = CHUNK_STREAMER.scheduleAtFixedRate(() -> {
+        MiniCore.getScheduler().runTaskTimer(task -> {
             if (!ctx.channel().isActive()) {
-                if (taskHolder[0] != null) {
-                    taskHolder[0].cancel(false);
-                }
+                task.cancel();
                 return;
             }
 
             int start = index.getAndAdd(chunksPerBatch);
 
             if (start >= chunkCoordinates.size()) {
-                if (taskHolder[0] != null) {
-                    taskHolder[0].cancel(false);
-                }
+                task.cancel();
                 return;
             }
 
@@ -93,8 +86,7 @@ public class World {
                     }
                 }
             });
-
-        }, 0, 50, TimeUnit.MILLISECONDS);
+        }, 0L, 1L);
     }
 
     public static void addPlayer(Player player) {
@@ -274,6 +266,17 @@ public class World {
             return (String) BlockRegistry.getBlockName(blockId, 772);
         }
         return "minecraft:air";
+    }
+
+    public static int getBlockId(int x, int y, int z) {
+        int chunkX = x >> 4;
+        int chunkZ = z >> 4;
+
+        Chunk chunk = getChunkAt(chunkX, chunkZ);
+        if (chunk != null) {
+            return chunk.getBlockAt(x, y, z);
+        }
+        return 0;
     }
 
 
