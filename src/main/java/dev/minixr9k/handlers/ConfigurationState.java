@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
@@ -99,6 +100,13 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        if (cause instanceof IOException || cause.getMessage() != null && cause.getMessage().contains("Connection reset")) {
+            System.out.printf("%s lost connection: Connection reset by peer", player.getUsername());
+        } else {
+            System.out.printf("Exception in channel for %s: %s", player.getUsername(), cause.getMessage());
+            cause.printStackTrace();
+        }
+
         ctx.close();
     }
 }

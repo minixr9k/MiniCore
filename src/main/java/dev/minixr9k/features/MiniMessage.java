@@ -12,6 +12,8 @@ public class MiniMessage {
             JsonObject object = new JsonObject();
             String color = "";
             String coloredMessage = "";
+            boolean italic = false;
+            boolean bold = false;
             int startColor = message.indexOf("<");
             int endColor = message.indexOf(">");
 
@@ -39,6 +41,12 @@ public class MiniMessage {
 
             if (!coloredMessage.isEmpty() && !color.isEmpty())
                 object.addProperty("color", color);
+
+            if (!coloredMessage.isEmpty())
+                object.addProperty("italic", italic);
+
+            if (!coloredMessage.isEmpty())
+                object.addProperty("bold", bold);
 
             jsonArray.add(object);
         }

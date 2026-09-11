@@ -132,6 +132,22 @@ public class ProtocolUtils {
                 writeNbtField(buf, "color", color);
             }
 
+            if (obj.has("italic")) {
+                boolean italic = obj.get("italic").getAsBoolean();
+
+                buf.writeByte(1); // tag byte / boolean
+                writeNBTString(buf, "italic");
+                buf.writeBoolean(italic);
+            }
+
+            if (obj.has("bold")) {
+                boolean bold = obj.get("bold").getAsBoolean();
+
+                buf.writeByte(1); // tag byte / boolean
+                writeNBTString(buf, "bold");
+                buf.writeBoolean(bold);
+            }
+
             if (obj.has("type")) {
                 String type = obj.get("type").getAsString();
 

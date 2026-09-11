@@ -5,6 +5,7 @@ import dev.minixr9k.api.EventBus;
 import dev.minixr9k.api.event.*;
 import dev.minixr9k.auth.PlayerProfile;
 import dev.minixr9k.config.Configuration;
+import dev.minixr9k.features.MiniMessage;
 import dev.minixr9k.features.SkinCache;
 import dev.minixr9k.features.World;
 import dev.minixr9k.network.handlers.*;
@@ -16,9 +17,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 import static dev.minixr9k.features.World.*;
 import static dev.minixr9k.utils.ProtocolUtils.*;
@@ -91,6 +94,8 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
                     player.updateInventory(0);
 
                     new ClientboundCommands(List.of()).send(ctx, protocolVersion);
+
+//                    player.getInventory().setItemInMainHand(new ItemStack("minecraft:stick", (short) 1, List.of(new ItemComponent("minecraft:custom_name", MiniMessage.parse("<#ffffff>kek")))));
                 });
 
             } catch (Exception e) {
@@ -200,7 +205,21 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
+        String username = (player != null && player.getUsername() != null)
+                ? player.getUsername()
+                : ctx.channel().remoteAddress().toString();
+
+        String msg = cause.getMessage();
+        boolean isReset = cause instanceof java.io.IOException
+                || (msg != null && (msg.contains("Connection reset") || msg.contains("Broken pipe")));
+
+        if (isReset) {
+            System.out.println("[In-game/Disconnect] " + username + " lost connection: Connection reset by peer");
+        } else {
+            System.out.printf("[In-game] Exception in channel for %s: %s%n", username, msg);
+            cause.printStackTrace();
+        }
+
         ctx.close();
     }
 }

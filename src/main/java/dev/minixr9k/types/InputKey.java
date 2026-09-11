@@ -5,6 +5,7 @@ public enum InputKey {
     KEY_A,
     KEY_S,
     KEY_D,
+    KEY_G,
     KEY_Q,
     KEY_CTRL_Q,
     KEY_F,

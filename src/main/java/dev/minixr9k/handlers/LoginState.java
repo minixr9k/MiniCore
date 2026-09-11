@@ -22,6 +22,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -43,7 +44,7 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
-        if (protocolVersion < 772) {
+        if (protocolVersion != Configuration.get().features.mainProtocol) {
             if (Configuration.get().features.debug)
                 System.out.println("[Core] подключение с версией протокола " + protocolVersion);
             new ClientboundLoginDisconnect("Для подключения используйте версию 1.21.8").send(ctx, protocolVersion);

@@ -1,8 +1,8 @@
 package dev.minixr9k;
 
 import dev.minixr9k.handlers.HandshakeState;
-import dev.minixr9k.utils.ProtocolDetector;
-import dev.minixr9k.utils.VarIntFrameDecoder;
+import dev.minixr9k.network.codec.MinecraftFrameDecoder;
+import dev.minixr9k.utils.ClientType;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -28,7 +28,6 @@ public class NetworkServer {
 
         System.out.println("[Core/Network] Ивент-луп выбран: " + (useEpoll ? "Epoll (Linux Native)" : "NIO (Java)"));
 
-        // 1. Создаем группы потоков в зависимости от ОС
         bossGroup = useEpoll ? new EpollEventLoopGroup(1) : new NioEventLoopGroup(1);
         workerGroup = useEpoll ? new EpollEventLoopGroup(4) : new NioEventLoopGroup(4);
 
@@ -39,22 +38,16 @@ public class NetworkServer {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) {
-//                            ch.pipeline().addLast("splitter", new VarIntFrameDecoder());
-//                            ch.pipeline().addLast("handler", new HandshakeState());
-                            ch.pipeline().addLast("detector", new ProtocolDetector());
+                            ch.pipeline().addLast("frame_decoder", new MinecraftFrameDecoder());
+                            ch.pipeline().addLast("handler", new HandshakeState(ClientType.MODERN));
                         }
                     });
 
             ChannelFuture f = b.bind(port).sync();
             System.out.println("[Core/Done] Server bound to port " + port);
-//            f.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-//        finally {
-//            workerGroup.shutdownGracefully();
-//            bossGroup.shutdownGracefully();
-//        }
     }
 
     public void stop() {

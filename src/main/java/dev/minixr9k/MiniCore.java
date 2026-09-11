@@ -24,16 +24,7 @@ public class MiniCore {
         networkServer = new NetworkServer(Configuration.get().port);
         networkServer.start();
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("[ChunkHolder] Выключение сервера... Сохраняем мир...");
-            if (networkServer != null) {
-                networkServer.stop();
-            }
-            if (serverThread != null) {
-                serverThread.shutdown();
-            }
-            World.saveWorld();
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(MiniCore::shutdown));
     }
 
     public static TaskScheduler getScheduler() {
@@ -44,9 +35,15 @@ public class MiniCore {
         return serverThread;
     }
 
-    // TODO
     public static void shutdown() {
-
+        System.out.println("[ChunkHolder] Выключение сервера... Сохраняем мир...");
+        if (networkServer != null) {
+            networkServer.stop();
+        }
+        if (serverThread != null) {
+            serverThread.shutdown();
+        }
+        World.saveWorld();
     }
 
 }

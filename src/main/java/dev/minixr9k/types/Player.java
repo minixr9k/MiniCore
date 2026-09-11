@@ -434,6 +434,10 @@ public class Player extends Entity {
         return teleportImmunityTicks;
     }
 
+    public void setTeleportImmunityTicks(int ticks) {
+        this.teleportImmunityTicks = ticks;
+    }
+
     public void decreaseImmunity() {
         if (this.teleportImmunityTicks > 0) {
             this.teleportImmunityTicks--;
