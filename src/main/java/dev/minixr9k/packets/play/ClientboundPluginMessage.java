@@ -8,20 +8,20 @@ import static dev.minixr9k.utils.ProtocolUtils.*;
 public class ClientboundPluginMessage implements MinecraftPacket {
 
     private final String channel;
-    private final String command;
-    private final String value;
+    private final ByteBuf data;
 
-    public ClientboundPluginMessage(String channel, String command, String value) {
+    public ClientboundPluginMessage(String channel, ByteBuf data) {
         this.channel = channel;
-        this.command = command;
-        this.value = value;
+        this.data = data;
     }
 
     @Override
     public void write(ByteBuf out, int protocolVersion) {
         writeString(out, channel);
-        writeStringWithShort(out, command);
-        writeStringWithShort(out, value);
+        if (data != null && data.isReadable()) {
+            out.writeBytes(data);
+            data.release();
+        }
     }
 
     @Override

@@ -33,7 +33,7 @@ public class KeepAliveHandler {
 
             this.lastKeepAliveId = System.currentTimeMillis();
             EventBus.getInstance().callEvent(new PlayerKeepAliveEvent(player));
-            new ClientboundKeepAlive().send(ctx, player.getProtocolVersion());
+            new ClientboundKeepAlive().send(ctx, player.getProtocolVersion(), player);
             this.keepAlivePending = true;
             this.lastKeepAliveSentTime = System.currentTimeMillis();
         }, 100L, 300L);

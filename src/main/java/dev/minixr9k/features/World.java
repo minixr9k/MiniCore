@@ -8,6 +8,7 @@ import dev.minixr9k.packets.beta.play.*;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.registries.BlockRegistry;
 import dev.minixr9k.types.*;
+import dev.minixr9k.types.textdisplay.TextDisplay;
 import io.netty.channel.ChannelHandlerContext;
 
 import java.io.File;
@@ -47,14 +48,14 @@ public class World {
         return chunks;
     }
 
-    public static void sendChunks(ChannelHandlerContext ctx, int protocolVersion, int chunkRadius) {
+    public static void sendChunks(Player player, int protocolVersion, int chunkRadius) {
         List<int[]> chunkCoordinates = getChunkSpiral(chunkRadius);
 
         AtomicInteger index = new AtomicInteger(0);
         int chunksPerBatch = 4;
 
         MiniCore.getScheduler().runTaskTimer(task -> {
-            if (!ctx.channel().isActive()) {
+            if (!player.getCtx().channel().isActive()) {
                 task.cancel();
                 return;
             }
@@ -68,7 +69,7 @@ public class World {
 
             int end = Math.min(start + chunksPerBatch, chunkCoordinates.size());
 
-            ctx.executor().execute(() -> {
+            player.getCtx().executor().execute(() -> {
                 for (int i = start; i < end; i++) {
                     int[] pos = chunkCoordinates.get(i);
                     int x = pos[0];
@@ -77,12 +78,12 @@ public class World {
                     Chunk chunk = World.getChunkAt(x, z);
                     if (chunk != null) {
                         if (protocolVersion < 99) {
-                            new PreChunk32Packet(x, z, true).send(ctx, protocolVersion);
-                            new MapChunk33Packet(chunk).send(ctx, protocolVersion);
+                            new PreChunk32Packet(x, z, true).send(player.getCtx(), protocolVersion, player);
+                            new MapChunk33Packet(chunk).send(player.getCtx(), protocolVersion, player);
                             continue;
                         }
-                        new ClientboundLinearChunkWithLight(chunk).send(ctx, protocolVersion);
-                        new ClientboundChunkLightUpdate(x, z).send(ctx, protocolVersion);
+                        new ClientboundLinearChunkWithLight(chunk).send(player.getCtx(), protocolVersion, player);
+                        new ClientboundChunkLightUpdate(x, z).send(player.getCtx(), protocolVersion, player);
                     }
                 }
             });
@@ -98,38 +99,38 @@ public class World {
             if (p.getProtocolVersion() < 99) {
                 if (p.getCtx() == player.getCtx()) continue;
 
-                new NamedEntitySpawn20Packet(player.getEntityId(), player.getUsername(), player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch(), (short)0).send(p.getCtx(), p.getProtocolVersion());
+                new NamedEntitySpawn20Packet(player.getEntityId(), player.getUsername(), player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch(), (short)0).send(p.getCtx(), p.getProtocolVersion(), p);
                 continue;
             }
 
             List<PlayerProfile> profile = SkinCache.get(player.getUuid());
             new ClientboundPlayerInfoUpdate(actions, player.getUuid(), player.getUsername(), profile).send(p.getCtx(), p.getProtocolVersion());
-            new ClientboundSpawnEntity(player.getEntityId(), player.getUuid(), "minecraft:player", 33, 107, 31, 0, 0, 0, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundSpawnEntity(player.getEntityId(), player.getUuid(), "minecraft:player", 33, 107, 31, 0, 0, 0, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
             if (p.getCtx() == player.getCtx()) {
                 ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(1);
                 metadata.add(new MetadataEntry<>(p.getProtocolVersion() <= 772 ? 17 : 16, Metadata.BYTE, (byte) 127));
-                metadata.send(p.getCtx(), p.getProtocolVersion());
+                metadata.send(p.getCtx(), p.getProtocolVersion(), p);
             }
             else {
                 ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(player.getEntityId());
                 metadata.add(new MetadataEntry<>(p.getProtocolVersion() <= 772 ? 17 : 16, Metadata.BYTE, (byte) 127));
-                metadata.send(p.getCtx(), p.getProtocolVersion());
+                metadata.send(p.getCtx(), p.getProtocolVersion(), p);
             }
         }
     }
 
     public static void spawnEntityPlayer(int entityId, UUID uuid, String username, Location loc, int actions, List<PlayerProfile> profile, Player observer) {
 
-        new ClientboundPlayerInfoUpdate(actions, uuid, username, profile).send(observer.getCtx(), observer.getProtocolVersion());
-        new ClientboundSpawnEntity(entityId, uuid, "minecraft:player", loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch(), loc.getYaw(), 0, 0, 0, 0).send(observer.getCtx(), observer.getProtocolVersion());
+        new ClientboundPlayerInfoUpdate(actions, uuid, username, profile).send(observer.getCtx(), observer.getProtocolVersion(), observer);
+        new ClientboundSpawnEntity(entityId, uuid, "minecraft:player", loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch(), loc.getYaw(), 0, 0, 0, 0).send(observer.getCtx(), observer.getProtocolVersion(), observer);
 
     }
 
     public static void removePlayer(Player player) {
         players.remove(player);
         for (Player p : players) {
-            new ClientboundPlayerInfoRemove(player.getUuid()).send(p.getCtx(), p.getProtocolVersion());
-            new ClientboundRemoveEntity(player.getEntityId()).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundPlayerInfoRemove(player.getUuid()).send(p.getCtx(), p.getProtocolVersion(), p);
+            new ClientboundRemoveEntity(player.getEntityId()).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -143,31 +144,31 @@ public class World {
         if (player.getProtocolVersion() < 99) {
             for (Player p : players) {
                 if (p.getCtx() == player.getCtx()) continue;
-                new NamedEntitySpawn20Packet(p.getEntityId(), p.getUsername(), p.getX(), p.getY(), p.getZ(), p.getYaw(), p.getPitch(), (short)0).send(player.getCtx(), player.getProtocolVersion());
+                new NamedEntitySpawn20Packet(p.getEntityId(), p.getUsername(), p.getX(), p.getY(), p.getZ(), p.getYaw(), p.getPitch(), (short)0).send(player.getCtx(), player.getProtocolVersion(), player);
             }
             return;
         }
 
         for (Player p : players) {
             List<PlayerProfile> profile = SkinCache.get(p.getUuid());
-            new ClientboundPlayerInfoUpdate(actions, p.getUuid(), p.getUsername(), profile).send(player.getCtx(), player.getProtocolVersion());
-            new ClientboundSpawnEntity(p.getEntityId(), p.getUuid(), "minecraft:player", p.getX(), p.getY(), p.getZ(), p.getYaw(), p.getPitch(), 0, 0, 0, 0, 0).send(player.getCtx(), player.getProtocolVersion());
+            new ClientboundPlayerInfoUpdate(actions, p.getUuid(), p.getUsername(), profile).send(player.getCtx(), player.getProtocolVersion(), player);
+            new ClientboundSpawnEntity(p.getEntityId(), p.getUuid(), "minecraft:player", p.getX(), p.getY(), p.getZ(), p.getYaw(), p.getPitch(), 0, 0, 0, 0, 0).send(player.getCtx(), player.getProtocolVersion(), player);
             ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(p.getEntityId());
             metadata.add(new MetadataEntry<>(17, Metadata.BYTE, (byte)127));
-            metadata.send(player.getCtx(), player.getProtocolVersion());
+            metadata.send(player.getCtx(), player.getProtocolVersion(), player);
             if (p.getInventory() != null) {
                 ItemStack item = p.getInventory().getItemInMainHand();
                 if (item == null) {
                     item = new ItemStack(null, (short) 0);
                 }
-                new ClientboundSetEquipment(p.getEntityId(), 0, new ItemStack(item.getType(), item.getCount(), item.getComponents())).send(player.getCtx(), player.getProtocolVersion());
+                new ClientboundSetEquipment(p.getEntityId(), 0, new ItemStack(item.getType(), item.getCount(), item.getComponents())).send(player.getCtx(), player.getProtocolVersion(), player);
             }
         }
     }
 
     public static void spawnEntities(Player player) {
         for (Entity en : entities) {
-            new ClientboundSpawnEntity(en.getEntityId(), en.getUuid(), en.getEntityType(), en.getX(), en.getY(), en.getZ(), en.getYaw(), en.getPitch(), en.getYaw(), 0, 0, 0, 0).send(player.getCtx(), player.getProtocolVersion());
+            new ClientboundSpawnEntity(en.getEntityId(), en.getUuid(), en.getEntityType(), en.getX(), en.getY(), en.getZ(), en.getYaw(), en.getPitch(), en.getYaw(), 0, 0, 0, 0).send(player.getCtx(), player.getProtocolVersion(), player);
         }
     }
 
@@ -183,19 +184,19 @@ public class World {
         for (Player p : players) {
             if (p.getCtx() == player.getCtx()) continue;
             if (p.getProtocolVersion() < 99) {
-                new EntityTeleport34Packet(player.getEntityId(), player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch()).send(p.getCtx(), p.getProtocolVersion());
+                new EntityTeleport34Packet(player.getEntityId(), player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch()).send(p.getCtx(), p.getProtocolVersion(), p);
                 continue;
             }
-            new ClientboundEntityPositionSync(player.getEntityId(), player.getX(), player.getY(), player.getZ(), 0, 0, 0, player.getYaw(), player.getPitch(), true).send(p.getCtx(), p.getProtocolVersion());
-            new ClientboundSetHeadRotation(player.getEntityId(), yawAngle).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundEntityPositionSync(player.getEntityId(), player.getX(), player.getY(), player.getZ(), 0, 0, 0, player.getYaw(), player.getPitch(), true).send(p.getCtx(), p.getProtocolVersion(), p);
+            new ClientboundSetHeadRotation(player.getEntityId(), yawAngle).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
     public static void moveEntity(Entity entity) {
         byte yawAngle = (byte) (entity.getYaw() * 256.0F / 360.0F);
         for (Player p : players) {
-            new ClientboundEntityPositionSync(entity.getEntityId(), entity.getX(), entity.getY(), entity.getZ(), 0, 0, 0, entity.getYaw(), entity.getPitch(), true).send(p.getCtx(), p.getProtocolVersion());
-            new ClientboundSetHeadRotation(entity.getEntityId(), yawAngle).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundEntityPositionSync(entity.getEntityId(), entity.getX(), entity.getY(), entity.getZ(), 0, 0, 0, entity.getYaw(), entity.getPitch(), true).send(p.getCtx(), p.getProtocolVersion(), p);
+            new ClientboundSetHeadRotation(entity.getEntityId(), yawAngle).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -203,9 +204,9 @@ public class World {
         for (Player p : players) {
             if (p.getCtx() == player.getCtx()) continue;
             if (p.getEntityId() == player.getPassengerOfEntity())
-                new ClientboundSetPassengers(1, entityId).send(p.getCtx(), p.getProtocolVersion());
+                new ClientboundSetPassengers(1, entityId).send(p.getCtx(), p.getProtocolVersion(), p);
             else
-                new ClientboundSetPassengers(player.getPassengerOfEntity(), entityId).send(p.getCtx(), p.getProtocolVersion());
+                new ClientboundSetPassengers(player.getPassengerOfEntity(), entityId).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -216,7 +217,7 @@ public class World {
                 // TODO beta1.7.3 swing
                 continue;
             }
-            new ClientboundEntityAnimation(player.getEntityId(), (byte)animation).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundEntityAnimation(player.getEntityId(), (byte)animation).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -233,7 +234,7 @@ public class World {
         for (Player p : players) {
             if (p.getCtx() == player.getCtx()) continue;
             if (p.getProtocolVersion() < 99) continue;
-            packet.send(p.getCtx(), p.getProtocolVersion());
+            packet.send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -249,14 +250,14 @@ public class World {
 
         for (Player p : players) {
             if (p.getProtocolVersion() < 99) {
-                new BlockChange53Packet(x, y, z, 0).send(p.getCtx(), p.getProtocolVersion());
+                new BlockChange53Packet(x, y, z, 0).send(p.getCtx(), p.getProtocolVersion(), p);
                 continue;
             }
-            new ClientboundBlockUpdate(x, y, z, 0).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundBlockUpdate(x, y, z, 0).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
-    public static String getBlock(int x, int y, int z) {
+    public static String getBlockType(int x, int y, int z) {
         int chunkX = x >> 4;
         int chunkZ = z >> 4;
 
@@ -266,6 +267,18 @@ public class World {
             return (String) BlockRegistry.getBlockName(blockId, 772);
         }
         return "minecraft:air";
+    }
+
+    public static Block getBlock(int x, int y, int z) {
+        int chunkX = x >> 4;
+        int chunkZ = z >> 4;
+
+        Chunk chunk = getChunkAt(chunkX, chunkZ);
+        if (chunk != null) {
+            int blockId = chunk.getBlockAt(x, y, z);
+            return new Block(BlockRegistry.getBlockName(blockId, 772), new Location(x, y, z));
+        }
+        return new Block("minecraft:air", new Location(x, y, z));
     }
 
     public static int getBlockId(int x, int y, int z) {
@@ -294,10 +307,10 @@ public class World {
 
         for (Player p : players) {
             if (p.getProtocolVersion() < 99) {
-                new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion());
+                new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
                 continue;
             }
-            new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -314,10 +327,10 @@ public class World {
 
         for (Player p : players) {
             if (p.getProtocolVersion() < 99) {
-                new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion());
+                new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
                 continue;
             }
-            new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -326,10 +339,20 @@ public class World {
         if (blockId == -1) return;
 
         if (p.getProtocolVersion() < 99) {
-            new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion());
+            new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
             return;
         }
-        new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion());
+        new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
+    }
+
+    public static void setLocalBlock(int x, int y, int z, int blockId, Player p) {
+        if (blockId == -1) return;
+
+        if (p.getProtocolVersion() < 99) {
+            new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
+            return;
+        }
+        new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
     }
 
     public static void setEquipment(Player player) {
@@ -339,7 +362,7 @@ public class World {
         }
         for (Player p : players) {
             if (p.getCtx() == player.getCtx()) continue;
-            new ClientboundSetEquipment(player.getEntityId(), 0, new ItemStack(item.getType(), item.getCount(), item.getComponents())).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundSetEquipment(player.getEntityId(), 0, new ItemStack(item.getType(), item.getCount(), item.getComponents())).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -356,7 +379,7 @@ public class World {
         entity.setYaw(180);
         entities.add(entity);
         for (Player p : players) {
-            new ClientboundSpawnEntity(entityId, entityUUID, entityType, player.getX(), player.getY(), player.getZ(), 180, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundSpawnEntity(entityId, entityUUID, entityType, player.getX(), player.getY(), player.getZ(), 180, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
         }
         return entity;
     }
@@ -364,7 +387,15 @@ public class World {
     public static Entity spawnEntity(String entityType, double x, double y, double z) {
         int entityId = World.globalEntityId.getAndIncrement();
         UUID entityUUID = UUID.randomUUID();
-        Entity entity = new Entity();
+        Entity entity;
+        switch (entityType) {
+            case "minecraft:text_display" -> {
+                entity = new TextDisplay();
+            }
+            default -> {
+                entity = new Entity();
+            }
+        }
         entity.setEntityId(entityId);
         entity.setEntityType(entityType);
         entity.setUuid(entityUUID);
@@ -373,7 +404,7 @@ public class World {
         entity.setZ(z);
         entities.add(entity);
         for (Player p : players) {
-            new ClientboundSpawnEntity(entityId, entityUUID, entityType, x, y, z, 0, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundSpawnEntity(entityId, entityUUID, entityType, x, y, z, 0, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
         }
         return entity;
     }
@@ -392,7 +423,7 @@ public class World {
         entity.setPitch(pitch);
         entities.add(entity);
         for (Player p : players) {
-            new ClientboundSpawnEntity(entityId, entityUUID, entityType, x, y, z, yaw, pitch, yaw, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundSpawnEntity(entityId, entityUUID, entityType, x, y, z, yaw, pitch, yaw, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
         }
         return entity;
     }
@@ -457,7 +488,7 @@ public class World {
         entity.setYaw(180);
         entities.add(entity);
         for (Player p : players) {
-            new ClientboundSpawnEntity(entityId, entityUUID, entityType, player.getX(), player.getY(), player.getZ(), 180, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundSpawnEntity(entityId, entityUUID, entityType, player.getX(), player.getY(), player.getZ(), 180, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
         }
         return entity;
     }
@@ -545,10 +576,10 @@ public class World {
         entities.remove(entity);
         for (Player p : players) {
             if (p.getProtocolVersion() < 99) {
-                new DestroyEntity29Packet(entityId).send(p.getCtx(), p.getProtocolVersion());
+                new DestroyEntity29Packet(entityId).send(p.getCtx(), p.getProtocolVersion(), p);
                 continue;
             }
-            new ClientboundRemoveEntity(entityId).send(p.getCtx(), p.getProtocolVersion());
+            new ClientboundRemoveEntity(entityId).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 

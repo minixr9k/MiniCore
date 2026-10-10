@@ -49,11 +49,11 @@ public class PlayerInteractionHandler {
             Player p = World.getPlayer(entityId);
             if (p != null && (p.getGameMode() == GameMode.ADVENTURE || p.getGameMode() == GameMode.SURVIVAL)) {
                 p.setHealth(p.getHealth() - 1);
-                new ClientboundDamageEvent(entityId, 34).send(ctx, player.getProtocolVersion());
+                new ClientboundDamageEvent(entityId, 34).send(ctx, player.getProtocolVersion(), player);
                 return;
             }
 
-            new ClientboundDamageEvent(entityId, 34).send(ctx, player.getProtocolVersion());
+            new ClientboundDamageEvent(entityId, 34).send(ctx, player.getProtocolVersion(), player);
         }
     }
 
@@ -67,7 +67,7 @@ public class PlayerInteractionHandler {
 
         if (player.getGameMode() != GameMode.CREATIVE) return;
 
-        String type = World.getBlock(x, y, z);
+        String type = World.getBlockType(x, y, z);
         int idx = type.indexOf("[");
         if (idx != -1) {
             type = type.substring(0, idx);
@@ -90,17 +90,17 @@ public class PlayerInteractionHandler {
         if ((status == 0 && player.getGameMode() == GameMode.CREATIVE)
                 || (status == 2 && player.getGameMode() == GameMode.SURVIVAL)) {
 
-            BlockBreakEvent event = new BlockBreakEvent(player, new Block(World.getBlock(x, y, z), new Location(x, y, z)));
+            BlockBreakEvent event = new BlockBreakEvent(player, World.getBlock(x, y, z));
             EventBus.getInstance().callEvent(event);
 
             if (event.isCancelled()) {
-                new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion());
+                new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion(), player);
                 player.updateInventory(0);
                 return;
             }
 
             breakBlock(x, y, z);
-            new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion());
+            new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion(), player);
         }
         else if (status == 3) {
             EventBus.getInstance().callEvent(new PlayerInputEvent(player, InputKey.KEY_CTRL_Q));
@@ -173,11 +173,6 @@ public class PlayerInteractionHandler {
         boolean worldBorderHit = in.readBoolean();
         int sequence = readVarInt(in);
 
-        if (player.getInventory().getItemInMainHand() == null) {
-            new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion());
-            return;
-        }
-
         // right click block
 
         int x = (int) (location >> 38);
@@ -185,6 +180,11 @@ public class PlayerInteractionHandler {
         int z = (int) ((location << 26) >> 38);
 
         EventBus.getInstance().callEvent(new PlayerInteractEvent(player, ActionType.RIGHT_CLICK_BLOCK, x, y, z));
+
+        if (player.getInventory().getItemInMainHand() == null) {
+            new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion(), player);
+            return;
+        }
 
         switch (face) {
             case 0 -> y--; // Кликнули снизу блока -> новый блок под ним
@@ -202,18 +202,18 @@ public class PlayerInteractionHandler {
         int blockId = BlockRegistry.getBlock(player.getInventory().getItemInMainHand().getType(), 772);
         if (blockId == -1) return;
 
-        BlockPlaceEvent event = new BlockPlaceEvent(player, new Block(World.getBlock(x, y, z), new Location(x, y, z)));
+        BlockPlaceEvent event = new BlockPlaceEvent(player, World.getBlock(x, y, z));
 
         EventBus.getInstance().callEvent(event);
 
         if (event.isCancelled()) {
-            new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion());
+            new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion(), player);
             player.updateInventory(0);
             return;
         }
 
         placeBlock(x, y, z, blockId);
-        new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion());
+        new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion(), player);
 
         if (player.getGameMode() != GameMode.SURVIVAL) return;
         ItemStack item = player.getInventory().getItemInMainHand();

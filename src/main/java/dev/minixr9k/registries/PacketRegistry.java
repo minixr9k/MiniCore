@@ -17,6 +17,7 @@ public class PacketRegistry {
     private static final Map<Integer, Class<? extends MinecraftPacket>> handshakePackets = new HashMap<>();
     private static final Map<Integer, Class<? extends MinecraftPacket>> loginPackets = new HashMap<>();
     private static final Map<Integer, Class<? extends MinecraftPacket>> configurationPackets = new HashMap<>();
+    private static final Map<Integer, Class<? extends MinecraftPacket>> playPackets = new HashMap<>();
 
     static {
         handshakePackets.put(0x00, Handshake.class);
@@ -44,6 +45,12 @@ public class PacketRegistry {
 
     public static MinecraftPacket handleConfiguration(int packetId) throws Exception {
         Class<? extends MinecraftPacket> clazz = configurationPackets.get(packetId);
+        if (clazz == null) return null;
+        return clazz.getDeclaredConstructor().newInstance();
+    }
+
+    public static MinecraftPacket handlePlay(int packetId) throws Exception {
+        Class<? extends MinecraftPacket> clazz = playPackets.get(packetId);
         if (clazz == null) return null;
         return clazz.getDeclaredConstructor().newInstance();
     }

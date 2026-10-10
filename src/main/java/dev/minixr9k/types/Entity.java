@@ -8,8 +8,8 @@ public class Entity {
     private UUID uuid;
     private String entityType;
 
-    private double x, y, z = 0;
-    private float yaw, pitch = 0;
+    public double x, y, z;
+    private float yaw, pitch;
     private boolean isSneaking;
 
     private double prevX, prevY, prevZ;

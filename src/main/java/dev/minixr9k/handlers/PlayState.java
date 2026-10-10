@@ -12,6 +12,7 @@ import dev.minixr9k.network.handlers.*;
 import dev.minixr9k.packets.confAndPlay.ClientboundResourcepackPush;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.types.*;
+import dev.minixr9k.types.textdisplay.TextDisplay;
 import dev.minixr9k.utils.Requests;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -50,15 +51,15 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
-        new ClientboundJoinGame(Configuration.get().gameMode, player).send(ctx, protocolVersion);
+        new ClientboundJoinGame(Configuration.get().gameMode, player).send(ctx, protocolVersion, player);
 
-        sendChunks(ctx, protocolVersion, Configuration.get().world.chunks);
+        sendChunks(player, protocolVersion, Configuration.get().world.chunks);
 
         String resourcePack = Configuration.get().resourcepack.url;
         String resourcePackSha1 = Configuration.get().resourcepack.sha1;
         if (!resourcePack.isEmpty() && !resourcePackSha1.isEmpty()) {
             UUID uuid = UUID.nameUUIDFromBytes(resourcePack.getBytes(StandardCharsets.UTF_8));
-            new ClientboundResourcepackPush(uuid, resourcePack, resourcePackSha1, Configuration.get().resourcepack.forced, Configuration.get().resourcepack.prompt).send(ctx, protocolVersion);
+            new ClientboundResourcepackPush(uuid, resourcePack, resourcePackSha1, Configuration.get().resourcepack.forced, Configuration.get().resourcepack.prompt).send(ctx, protocolVersion, player);
         }
 
         MiniCore.getScheduler().runTaskAsync(() -> {
@@ -93,9 +94,7 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
                     World.setEquipment(player);
                     player.updateInventory(0);
 
-                    new ClientboundCommands(List.of()).send(ctx, protocolVersion);
-
-//                    player.getInventory().setItemInMainHand(new ItemStack("minecraft:stick", (short) 1, List.of(new ItemComponent("minecraft:custom_name", MiniMessage.parse("<#ffffff>kek")))));
+                    new ClientboundCommands(List.of()).send(ctx, protocolVersion, player);
                 });
 
             } catch (Exception e) {
@@ -109,6 +108,12 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
         if (!in.isReadable()) return;
 
         int packetId = readVarInt(in);
+
+        // TODO
+//        PacketReceiveEvent packetReceiveEvent = new PacketReceiveEvent(packet, player);
+//        EventBus.getInstance().callEvent(packetReceiveEvent);
+//
+//        if (packetReceiveEvent.isCancelled()) return;
 
         switch (packetId) {
             case 0x00 -> handleTeleport(in);
@@ -214,9 +219,9 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
                 || (msg != null && (msg.contains("Connection reset") || msg.contains("Broken pipe")));
 
         if (isReset) {
-            System.out.println("[In-game/Disconnect] " + username + " lost connection: Connection reset by peer");
+            System.out.println("[In-game/Disconnect] " + username + " lost connection: Connection reset by peer\n");
         } else {
-            System.out.printf("[In-game] Exception in channel for %s: %s%n", username, msg);
+            System.out.printf("[In-game] Exception in channel for %s: %s%n\n", username, msg);
             cause.printStackTrace();
         }
 

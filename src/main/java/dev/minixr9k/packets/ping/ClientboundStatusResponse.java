@@ -9,17 +9,26 @@ import static dev.minixr9k.utils.ProtocolUtils.writeString;
 
 public class ClientboundStatusResponse implements MinecraftPacket {
 
+    private String status;
+
     @Override
     public void read(ByteBuf in, int protocolVersion) {}
 
     @Override
     public void write(ByteBuf out, int protocolVersion) {
-        String status = "";
         if (Configuration.get().features.pingSameProtocol)
-            status = "{\"version\":{\"name\":\"MiniCore\",\"protocol\":" + protocolVersion + "},\"players\":{\"max\":" + Configuration.get().motd.maxPlayers + ",\"online\":" + World.getAllPlayers().size() + "},\"description\":{\"text\":\"" + Configuration.get().motd.text + "\"}}";
+            status = "{\"version\":{\"name\":\"MiniCore\",\"protocol\":" + protocolVersion + "},\"players\":{\"max\":" + Configuration.get().motd.maxPlayers + ",\"online\":" + World.getAllPlayers().size() + "},\"description\":{\"text\":\"" + Configuration.get().motd.text + "\"}" + (Configuration.getServerIcon().isEmpty() ? "" : ",\"favicon\":\"" + Configuration.getServerIcon() + "\"") + "}";
         else
-            status = "{\"version\":{\"name\":\"MiniCore\",\"protocol\":" + Configuration.get().features.mainProtocol + "},\"players\":{\"max\":" + Configuration.get().motd.maxPlayers + ",\"online\":" + World.getAllPlayers().size() + "},\"description\":{\"text\":\"" + Configuration.get().motd.text + "\"}}";
+            status = "{\"version\":{\"name\":\"MiniCore\",\"protocol\":" + Configuration.get().features.mainProtocol + "},\"players\":{\"max\":" + Configuration.get().motd.maxPlayers + ",\"online\":" + World.getAllPlayers().size() + "},\"description\":{\"text\":\"" + Configuration.get().motd.text + "\"}" + (Configuration.getServerIcon().isEmpty() ? "" : ",\"favicon\":\"" + Configuration.getServerIcon() + "\"") + "}";
         writeString(out, status);
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     @Override

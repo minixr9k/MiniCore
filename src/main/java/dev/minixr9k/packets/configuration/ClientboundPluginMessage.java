@@ -8,11 +8,11 @@ import static dev.minixr9k.utils.ProtocolUtils.writeString;
 public class ClientboundPluginMessage implements MinecraftPacket {
 
     private final String channel;
-    private final String message;
+    private final ByteBuf data;
 
-    public ClientboundPluginMessage(String channel, String message) {
+    public ClientboundPluginMessage(String channel, ByteBuf data) {
         this.channel = channel;
-        this.message = message;
+        this.data = data;
     }
 
     @Override
@@ -21,7 +21,10 @@ public class ClientboundPluginMessage implements MinecraftPacket {
     @Override
     public void write(ByteBuf out, int protocolVersion) {
         writeString(out, channel);
-        writeString(out, message);
+        if (data != null && data.isReadable()) {
+            out.writeBytes(data);
+            data.release();
+        }
     }
 
     @Override

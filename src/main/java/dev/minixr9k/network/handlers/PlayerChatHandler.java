@@ -122,5 +122,9 @@ public class PlayerChatHandler {
             World.saveWorld();
             World.broadcast("[ChunkHolder] Успешно сохранен!");
         }
+
+        if (command.equals("setblock")) {
+            World.setLocalBlock(1, -60, 1, 1062, player);
+        }
     }
 }

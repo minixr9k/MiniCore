@@ -45,7 +45,7 @@ public class LegacyPlayState extends SimpleChannelInboundHandler<ByteBuf> {
         new UpdateHealth8Packet((short) 20).send(player.getCtx(), 14);
         player.teleport(0, 112, 0);
 
-        sendChunks(ctx, 14, chunkRadius);
+//        sendChunks(ctx, 14, chunkRadius);
 
         World.spawnPlayers(player);
         World.addPlayer(player);

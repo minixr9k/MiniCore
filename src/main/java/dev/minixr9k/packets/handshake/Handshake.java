@@ -27,6 +27,16 @@ public class Handshake implements MinecraftPacket {
     }
 
     @Override
+    public String toString() {
+        return "Handshake{" +
+                "protocolVersion=" + protocolVersion +
+                ", serverAddress='" + serverAddress + '\'' +
+                ", serverPort=" + serverPort +
+                ", nextState=" + nextState +
+                '}';
+    }
+
+    @Override
     public int getPacketId(int protocolVersion) {
         return 0x00;
     }

@@ -1,6 +1,7 @@
 package dev.minixr9k.network;
 
 import dev.minixr9k.MiniCore;
+import java.util.concurrent.locks.LockSupport;
 
 public class ServerThread extends Thread {
 
@@ -27,19 +28,23 @@ public class ServerThread extends Thread {
 
                 long tickStart = System.nanoTime();
 
-                MiniCore.getScheduler().tick();
+                try {
+                    MiniCore.getScheduler().tick();
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                }
 
                 lastTickExecutionTimeNanos = System.nanoTime() - tickStart;
 
                 double lastMspt = lastTickExecutionTimeNanos / 1_000_000.0;
                 currentMspt = (currentMspt * 0.95) + (lastMspt * 0.05);
             } else {
-                try {
-                    long sleepMillis = (targetNanosPerTick - elapsed) / 1_000_000L;
-                    if (sleepMillis > 0) {
-                        Thread.sleep(sleepMillis);
-                    }
-                } catch (InterruptedException ignored) {}
+                long timeLeft = targetNanosPerTick - (System.nanoTime() - lastTime);
+                if (timeLeft > 1_000_000L) {
+                    LockSupport.parkNanos(timeLeft - 500_000L);
+                } else if (timeLeft > 0) {
+                    Thread.yield();
+                }
             }
         }
     }

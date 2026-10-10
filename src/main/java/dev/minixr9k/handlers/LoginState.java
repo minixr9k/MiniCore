@@ -46,7 +46,7 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
     public void handlerAdded(ChannelHandlerContext ctx) {
         if (protocolVersion != Configuration.get().features.mainProtocol) {
             if (Configuration.get().features.debug)
-                System.out.println("[Core] подключение с версией протокола " + protocolVersion);
+                System.out.println("[Core/Login] подключение с версией протокола " + protocolVersion);
             new ClientboundLoginDisconnect("Для подключения используйте версию 1.21.8").send(ctx, protocolVersion);
             ctx.close();
         }
@@ -77,18 +77,15 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
             }
 
             if (username.length() < 3 || username.length() > 16) {
-                new ClientboundLoginDisconnect("Слишком длинный либо короткий ник").send(ctx, protocolVersion);
-                ctx.close();
+                disconnect(ctx, username, "Слишком длинный либо короткий ник");
             }
 
             if (Configuration.get().motd.maxPlayers > 0 && World.getAllPlayers().size() >= Configuration.get().motd.maxPlayers) {
-                new ClientboundLoginDisconnect("Сервер переполнен!").send(ctx, protocolVersion);
-                ctx.close();
+                disconnect(ctx, username, "Сервер переполнен!");
             }
 
             if (World.getPlayer(username) != null) {
-                new ClientboundLoginDisconnect("Игрок с таким ником уже играет на сервере!").send(ctx, protocolVersion);
-                ctx.close();
+                disconnect(ctx, username, "Игрок с таким ником уже играет на сервере!");
             }
 
             if (Configuration.get().proxy.enabled && Configuration.get().proxy.forwardingMode == JConfig.ForwardingMode.MODERN) {
@@ -111,9 +108,9 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
                 SkinCache.put(uuid, properties);
             }
 
-            System.out.println("[Core/" + protocolVersion + "] UUID of player " + username + " is " + uuid);
+            System.out.println("[Core/Login] UUID of player " + username + " is " + uuid);
 
-            new ClientboundLoginSuccessPacket(uuid, username).send(ctx, protocolVersion);
+            new ClientboundLoginSuccessPacket(uuid, username).send(ctx, protocolVersion, player);
         }
         else if (packet instanceof ServerboundPluginResponse) {
             int proxyMessageId = ((ServerboundPluginResponse) packet).getMessageId();
@@ -121,15 +118,14 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
 
             if (proxyMessageId == messageId) {
                 if (!success || ((ServerboundPluginResponse) packet).getData() == null) {
-                    new ClientboundLoginDisconnect("This server requires you to connect with Velocity.").send(ctx, protocolVersion);
-                    ctx.close();
+                    disconnect(ctx, "-", "This server requires you to connect with Velocity.");
                     return;
                 }
             }
 
             if (success) {
                 try {
-                    VelocityForwarding.ForwardedData forwardedData = VelocityForwarding.parse(((ServerboundPluginResponse) packet).getData(), Configuration.get().proxy.token);
+                    VelocityForwarding.ForwardedData forwardedData = VelocityForwarding.parse(((ServerboundPluginResponse) packet).getData(), Configuration.get().proxy.tokens.get(0));
 
                     UUID uuid = forwardedData.uuid;
                     String username = forwardedData.username;
@@ -146,12 +142,11 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
 
                     System.out.println("[Core/Velocity] UUID of player " + player.getUsername() + " is " + player.getUuid());
 
-                    new ClientboundLoginSuccessPacket(uuid, username).send(ctx, protocolVersion);
+                    new ClientboundLoginSuccessPacket(uuid, username).send(ctx, protocolVersion, player);
                 } catch (Exception e) {
                     if (Configuration.get().features.debug)
                         System.err.println("Failed to verify Velocity payload: " + e.getMessage());
-                    new ClientboundLoginDisconnect("Invalid proxy response").send(ctx, protocolVersion);
-                    ctx.close();
+                    disconnect(ctx, "-", "Invalid proxy response");
                 }
             }
         }
@@ -165,8 +160,29 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
         }
     }
 
+    private void disconnect(ChannelHandlerContext ctx, String username, String reason) {
+        new ClientboundLoginDisconnect(reason).send(ctx, protocolVersion);
+        ctx.close();
+        System.out.println("[Core/Login] [" + ctx.channel().remoteAddress().toString() + "] Disconnecting " + username + " cause: " + reason);
+    }
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        String username = (player != null && player.getUsername() != null)
+                ? player.getUsername()
+                : ctx.channel().remoteAddress().toString();
+
+        String msg = cause.getMessage();
+        boolean isReset = cause instanceof java.io.IOException
+                || (msg != null && (msg.contains("Connection reset") || msg.contains("Broken pipe")));
+
+        if (isReset) {
+            System.out.println("[Login/Disconnect] " + username + " lost connection: Connection reset by peer\n");
+        } else {
+            System.out.printf("[Login] Exception in channel for %s: %s%n\n", username, msg);
+            cause.printStackTrace();
+        }
+
         ctx.close();
     }
 }

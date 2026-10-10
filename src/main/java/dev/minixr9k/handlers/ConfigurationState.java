@@ -1,5 +1,7 @@
 package dev.minixr9k.handlers;
 
+import dev.minixr9k.api.EventBus;
+import dev.minixr9k.api.event.PacketReceiveEvent;
 import dev.minixr9k.config.Configuration;
 import dev.minixr9k.packets.confAndPlay.ClientboundResourcepackPush;
 import dev.minixr9k.packets.confAndPlay.ClientboundUpdateTags;
@@ -36,15 +38,19 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
         if (protocolVersion <= 772)
-            new ClientboundKnownPacks("minecraft", "core", "1.21.8").send(ctx, 1);
+            new ClientboundKnownPacks("minecraft", "core", "1.21.8").send(ctx, 1, player);
         else if (protocolVersion == 773)
-            new ClientboundKnownPacks("minecraft", "core", "1.21.10").send(ctx, 1);
+            new ClientboundKnownPacks("minecraft", "core", "1.21.10").send(ctx, 1, player);
         else if (protocolVersion == 774)
-            new ClientboundKnownPacks("minecraft", "core", "1.21.11").send(ctx, 1);
+            new ClientboundKnownPacks("minecraft", "core", "1.21.11").send(ctx, 1, player);
         else if (protocolVersion == 775)
-            new ClientboundKnownPacks("minecraft", "core", "26.1").send(ctx, 1);
+            new ClientboundKnownPacks("minecraft", "core", "26.1").send(ctx, 1, player);
         else if (protocolVersion == 776)
-            new ClientboundKnownPacks("minecraft", "core", "26.2").send(ctx, 1);
+            new ClientboundKnownPacks("minecraft", "core", "26.2").send(ctx, 1, player);
+        else if (protocolVersion == 777)
+            new ClientboundKnownPacks("minecraft", "core", "26.3").send(ctx, 1, player);
+        else if (protocolVersion == 778)
+            new ClientboundKnownPacks("minecraft", "core", "26.4").send(ctx, 1, player);
     }
 
     @Override
@@ -57,6 +63,11 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
         if (packet != null) {
             packet.read(in, protocolVersion);
 
+            PacketReceiveEvent packetReceiveEvent = new PacketReceiveEvent(packet, player);
+            EventBus.getInstance().callEvent(packetReceiveEvent);
+
+            if (packetReceiveEvent.isCancelled()) return;
+
             handle(ctx, packet);
         }
     }
@@ -66,9 +77,13 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
             ctx.pipeline().replace(this, "handler", new PlayState(protocolVersion, player));
         }
         else if (packet instanceof ServerboundKnownPacksResponse) {
-            new ClientboundPluginMessage("minecraft:brand", "MiniCore").send(ctx, 1);
+
+            ByteBuf payload = ctx.alloc().buffer();
+            ProtocolUtils.writeString(payload, "MiniCore");
+            new ClientboundPluginMessage("minecraft:brand", payload).send(ctx, 1, player);
+
             sendRegistryData(ctx);
-            new ClientboundFinishConfiguration().send(ctx, 1);
+            new ClientboundFinishConfiguration().send(ctx, 1, player);
         }
         else if (packet instanceof ServerboundPluginMessage) {
             if (((ServerboundPluginMessage) packet).getChannel().equals("minecraft:brand")) {
@@ -100,10 +115,18 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        if (cause instanceof IOException || cause.getMessage() != null && cause.getMessage().contains("Connection reset")) {
-            System.out.printf("%s lost connection: Connection reset by peer", player.getUsername());
+        String username = (player != null && player.getUsername() != null)
+                ? player.getUsername()
+                : ctx.channel().remoteAddress().toString();
+
+        String msg = cause.getMessage();
+        boolean isReset = cause instanceof java.io.IOException
+                || (msg != null && (msg.contains("Connection reset") || msg.contains("Broken pipe")));
+
+        if (isReset) {
+            System.out.println("[Configuration/Disconnect] " + username + " lost connection: Connection reset by peer\n");
         } else {
-            System.out.printf("Exception in channel for %s: %s", player.getUsername(), cause.getMessage());
+            System.out.printf("[Configuration] Exception in channel for %s: %s%n\n", username, msg);
             cause.printStackTrace();
         }
 

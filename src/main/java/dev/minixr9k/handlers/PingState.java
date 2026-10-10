@@ -1,5 +1,6 @@
 package dev.minixr9k.handlers;
 
+import dev.minixr9k.config.Configuration;
 import dev.minixr9k.packets.ping.ClientboundPong;
 import dev.minixr9k.packets.ping.ClientboundStatusResponse;
 import dev.minixr9k.utils.ProtocolUtils;
@@ -22,7 +23,8 @@ public class PingState extends SimpleChannelInboundHandler<ByteBuf> {
         int packetLength = in.readableBytes();
 
         if (packetLength > 8) {
-            System.out.println("[Xr9kCore] Пакет слишком огромный! (Ping)");
+            if (Configuration.get().features.debug)
+                System.out.println("[Xr9kCore] Пакет слишком огромный! (Ping)");
             ctx.close();
             return;
         }

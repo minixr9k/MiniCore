@@ -120,7 +120,7 @@ public class PlayerMovementHandler {
                 entity.setX(entity.getPrevX());
                 entity.setY(entity.getPrevY());
                 entity.setZ(entity.getPrevZ());
-                new ClientboundSetPassengers(player.getPassengerOfEntity(), 0).send(ctx, player.getProtocolVersion());
+                new ClientboundSetPassengers(player.getPassengerOfEntity(), 0).send(ctx, player.getProtocolVersion(), player);
                 World.setPassenger(player, 0);
                 player.setPassengerOfEntity(0);
             }

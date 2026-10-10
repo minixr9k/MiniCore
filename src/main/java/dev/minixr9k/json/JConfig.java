@@ -3,7 +3,9 @@ package dev.minixr9k.json;
 import dev.minixr9k.types.GameMode;
 import dev.minixr9k.types.Location;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class JConfig {
@@ -33,7 +35,7 @@ public class JConfig {
     public static class ProxyConf {
         public boolean enabled = false;
         public ForwardingMode forwardingMode = ForwardingMode.BUNGEEGUARD;
-        public String token = "";
+        public List<String> tokens = new ArrayList<>();
     }
 
     public enum ForwardingMode {
@@ -53,6 +55,7 @@ public class JConfig {
         public int renderDistance = 12;
         public int simulationDistance = 12;
         public boolean flatType = true;
+        public boolean inf = true;
     }
 
     public static class FeaturesConf {
@@ -61,10 +64,13 @@ public class JConfig {
         public boolean debug = false;
         public boolean logCommands = true;
         public boolean logBrand = true;
+        public boolean logHandshakeState = false;
+        public boolean pingsEnabled = true;
         public boolean buildInCommands = true;
         public boolean betaSupport = false;
         public boolean lceSupport = false;
         public String chunkFormat = "DEV/ZREGION";
+        public String universe = "";
         public int mainProtocol = 772;
         public boolean fixBoatFly = true;
         public boolean illegalCharactersCheck = true;

@@ -74,9 +74,8 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
                 if (packet != null) {
                     packet.read(in, -1);
                     handleBeta(ctx, packet);
-                } else {
-                    System.out.println("Неизвестный Beta-пакет: 0x" + Integer.toHexString(packetId));
                 }
+
             } catch (Throwable t) {
                 System.err.println("Ошибка при создании или чтении пакета 0x" + Integer.toHexString(packetId));
                 t.printStackTrace();
@@ -90,6 +89,9 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
             String serverAddress = ((Handshake) packet).getServerAddress();
             int serverPort = ((Handshake) packet).getServerPort();
             int nextState = ((Handshake) packet).getNextState();
+
+            if (Configuration.get().features.debug)
+                System.out.println(packet);
 
             EventBus.getInstance().callEvent(new HandshakeEvent(ctx, protocolVersion, serverAddress, serverPort, nextState));
 
@@ -113,8 +115,11 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
                             if (obj.has("name")) {
                                 if (obj.get("name").getAsString().equals("bungeeguard-token")) {
                                     if (obj.has("value")) {
-                                        if (obj.get("value").getAsString().equals(Configuration.get().proxy.token)) {
-                                            authorized = true;
+                                        for (String token : Configuration.get().proxy.tokens) {
+                                            if (obj.get("value").getAsString().equals(token)) {
+                                                authorized = true;
+                                                break;
+                                            }
                                         }
                                     }
                                 }
@@ -126,20 +131,23 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
                         }
                     }
 
-                    if (Configuration.get().proxy.token.isEmpty()) {
+                    if (Configuration.get().proxy.tokens.isEmpty()) {
                         authorized = true;
                     }
 
                     if (!authorized) {
-                        new ClientboundLoginDisconnect("This server requires you to connect with Proxy").send(ctx, protocolVersion);
-                        ctx.close();
+                        disconnect(ctx, protocolVersion, "This server requires you to connect with Proxy");
+                        return;
                     }
                 }
             }
 
             switch (nextState) {
                 case 1 -> {
-                    ctx.pipeline().replace(this, "handler", new PingState(protocolVersion));
+                    if (Configuration.get().features.pingsEnabled)
+                        ctx.pipeline().replace(this, "handler", new PingState(protocolVersion));
+                    else
+                        ctx.close();
                 }
                 case 2 -> {
                     ctx.pipeline().replace(this, "handler", new LoginState(protocolVersion, properties));
@@ -148,8 +156,7 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
                     if (Configuration.get().features.acceptTransfers)
                         ctx.pipeline().replace(this, "handler", new LoginState(protocolVersion, properties));
                     else {
-                        new ClientboundLoginDisconnect("This server does not accept transfers").send(ctx, protocolVersion);
-                        ctx.close();
+                        disconnect(ctx, protocolVersion, "This server does not accept transfers");
                     }
                 }
                 default -> {
@@ -164,12 +171,18 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
     private void handleBeta(ChannelHandlerContext ctx, BetaPacket packet) {
         if (packet instanceof Handshake2Packet) {
             String username = ((Handshake2Packet) packet).getUsername();
-            System.out.println("beta client with username=" + username);
 
             new Handshake2Packet("-").send(ctx, -1);
 
             ctx.pipeline().replace(this, "handler", new LegacyLoginState(username));
         }
+    }
+
+    private void disconnect(ChannelHandlerContext ctx, int protocolVersion, String reason) {
+        new ClientboundLoginDisconnect(reason).send(ctx, protocolVersion);
+        ctx.close();
+        if (Configuration.get().features.logHandshakeState)
+            System.out.println("[Core/Handshake] [" + ctx.channel().remoteAddress().toString() + "] Disconnecting cause: " + reason);
     }
 
     @Override

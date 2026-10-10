@@ -39,6 +39,7 @@ public class PlayerInventoryHandler {
         }
 
         short slot = in.readShort();
+
         if (slot != -1) {
 
             int count = readVarInt(in); // item count

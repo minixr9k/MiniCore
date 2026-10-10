@@ -1,5 +1,6 @@
 package dev.minixr9k.utils;
 
+import dev.minixr9k.types.Player;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -12,7 +13,7 @@ public interface BetaPacket {
 
     int getPacketId(int protocolVersion);
 
-    default void send(ChannelHandlerContext ctx, int protocolVersion) {
+    default void send(ChannelHandlerContext ctx, int protocolVersion, Player player) {
         ByteBuf packet = ctx.alloc().buffer();
         try {
             packet.writeByte(getPacketId(protocolVersion));
@@ -25,5 +26,9 @@ public interface BetaPacket {
             packet.release();
             throw e;
         }
+    }
+
+    default void send(ChannelHandlerContext ctx, int protocolVersion) {
+        send(ctx, protocolVersion, null);
     }
 }

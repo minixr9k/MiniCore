@@ -8,7 +8,7 @@ public class PlayerInteractEvent extends Event {
 
     private final Player player;
     private final ActionType actionType;
-    private int x, y, z = 0;
+    private int x, y, z;
 
     public PlayerInteractEvent(Player player, ActionType actionType) {
         this.player = player;

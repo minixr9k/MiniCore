@@ -14,7 +14,6 @@ public class RegisteredListener implements Comparable<RegisteredListener> {
     }
 
     public void execute(Event event) throws Exception {
-        // Вызываем метод у конкретного объекта плагина, передавая объект события
         method.invoke(listener, event);
     }
 
