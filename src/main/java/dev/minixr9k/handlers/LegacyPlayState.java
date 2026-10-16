@@ -8,6 +8,7 @@ import dev.minixr9k.api.event.PlayerQuitEvent;
 import dev.minixr9k.config.Configuration;
 import dev.minixr9k.config.PluginLoader;
 import dev.minixr9k.features.World;
+import dev.minixr9k.network.handlers.PlayerChatHandler;
 import dev.minixr9k.packets.beta.play.*;
 import dev.minixr9k.packets.play.ClientboundKeepAlive;
 import dev.minixr9k.registries.PacketBetaRegistry;
@@ -33,22 +34,28 @@ public class LegacyPlayState extends SimpleChannelInboundHandler<ByteBuf> {
     private java.util.concurrent.ScheduledFuture<?> keepAliveTickFuture;
     private java.util.concurrent.ScheduledFuture<?> keepAliveTimeoutFuture;
 
+    private final PlayerChatHandler chatHandler;
+
     public LegacyPlayState(Player player) {
         this.player = player;
+        this.chatHandler = new PlayerChatHandler(player);
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
         int chunkRadius = Configuration.get().world.chunks;
 
-        new SpawnPosition6Packet(0, 112, 0).send(ctx, player.getProtocolVersion());
-        new UpdateHealth8Packet((short) 20).send(player.getCtx(), 14);
-        player.teleport(0, 112, 0);
+//        new SpawnPosition6Packet(0, 112, 0).send(ctx, player.getProtocolVersion());
+//        new UpdateHealth8Packet((short) 20).send(player.getCtx(), 14);
+        player.teleport(Configuration.get().spawnPosition);
 
-//        sendChunks(ctx, 14, chunkRadius);
+        sendChunks(player, 14, chunkRadius);
 
         World.spawnPlayers(player);
         World.addPlayer(player);
+
+        int opLevel = Configuration.get().operators.getOrDefault(player.getUsername(), 0);
+        if (opLevel > 0) player.setOpLevelNoPacket(opLevel);
 
         EventBus.getInstance().callEvent(new PlayerJoinEvent(player));
         World.broadcast("§e{player} joined the game (id={entityId})".replace("{player}", player.getUsername()).replace("{entityId}", String.valueOf(player.getEntityId())));
@@ -98,6 +105,11 @@ public class LegacyPlayState extends SimpleChannelInboundHandler<ByteBuf> {
     private void handlePacket(ChannelHandlerContext ctx, BetaPacket packet) {
         if (packet instanceof ChatMessage3Packet) {
             String message = ((ChatMessage3Packet) packet).getMessage();
+            if (message.length() > 256) {
+                ctx.close();
+                return;
+            }
+
             if (message.contains("§")) {
                 player.kick("Illegal characters");
                 return;
@@ -108,25 +120,17 @@ public class LegacyPlayState extends SimpleChannelInboundHandler<ByteBuf> {
 
                 EventBus.getInstance().callEvent(new PlayerCommandEvent(player, command));
 
-                if (command.startsWith("spawn")) {
-                    player.teleport(0, 112, 0);
-                }
-
-                if (command.startsWith("reload")) {
-                    if (player.getOpLevel() < 4) {
-                        player.sendMessage("Требуется 4 уровень оп для выполнения данной команды!");
-                        return;
-                    }
-                    PluginLoader.disablePlugins();
-                    PluginLoader.loadPlugins();
-                    player.sendMessage("Плагины перезагружены!");
-                }
-
+                chatHandler.executeCommand(player, command);
                 return;
             }
 
-            EventBus.getInstance().callEvent(new PlayerChatEvent(player, message));
-            World.broadcast("<username> ".replace("username", player.getUsername()) + message);
+            PlayerChatEvent event = new PlayerChatEvent(player, message);
+            EventBus.getInstance().callEvent(event);
+
+            String finalMessage = event.getStyle();
+            if (finalMessage.isEmpty()) return;
+
+            World.broadcast(finalMessage);
         }
         else if (packet instanceof PlayerPosition11Packet) {
             double x = ((PlayerPosition11Packet) packet).getX();
@@ -168,6 +172,15 @@ public class LegacyPlayState extends SimpleChannelInboundHandler<ByteBuf> {
             player.setOnGround(onGround);
 
             World.movePlayer(player);
+        }
+        else if (packet instanceof PlayerBreakBlock14Packet) {
+            int x = ((PlayerBreakBlock14Packet) packet).getX();
+            int y = ((PlayerBreakBlock14Packet) packet).getY();
+            int z = ((PlayerBreakBlock14Packet) packet).getZ();
+            byte status = ((PlayerBreakBlock14Packet) packet).getStatus();
+
+            if (status == 2) // finish block break
+                World.breakBlock(x, y, z);
         }
     }
 

@@ -1,9 +1,6 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.types.dialog.ActionButton;
-import dev.minixr9k.types.dialog.Dialog;
-import dev.minixr9k.types.dialog.DialogType;
-import dev.minixr9k.types.dialog.PlainMessage;
+import dev.minixr9k.types.dialog.*;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 
@@ -59,6 +56,212 @@ public class ClientboundShowDialog implements MinecraftPacket {
 
         if (dialog.getType() == DialogType.MULTI_ACTION) {
             out.writeByte(9);
+            writeNBTString(out, "inputs");
+            out.writeByte(10);
+
+            out.writeInt(dialog.getInputs().size());
+            for (Object obj : dialog.getInputs()) {
+                if (obj instanceof InputField element) {
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "type");
+                    writeNBTString(out, element.getType());
+
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "key");
+                    writeNBTString(out, element.getKey());
+
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "label");
+                    writeNBTString(out, element.getText());
+
+                    if (element.getWidth() != 200) {
+                        out.writeByte(3); // tag int
+                        writeNBTString(out, "width");
+                        out.writeInt(element.getWidth());
+                    }
+
+                    if (!element.isLabelVisible()) {
+                        out.writeByte(1); // tag byte
+                        writeNBTString(out, "label_visible");
+                        out.writeBoolean(element.isLabelVisible());
+                    }
+
+                    if (!element.getInitial().isEmpty()) {
+                        out.writeByte(8); // tag string
+                        writeNBTString(out, "label");
+                        writeNBTString(out, element.getInitial());
+                    }
+
+                    if (element.getMaxLength() != 32) {
+                        out.writeByte(3); // tag int
+                        writeNBTString(out, "max_length");
+                        out.writeInt(element.getWidth());
+                    }
+
+                    if (element.isMultiLine()) {
+                        out.writeByte(10);
+                        writeNBTString(out, "multiline");
+
+                        if (element.getMaxLines() != -1) {
+                            out.writeByte(3); // tag int
+                            writeNBTString(out, "max_lines");
+                            out.writeInt(element.getMaxLines());
+                        }
+
+                        if (element.getHeight() != -1) {
+                            out.writeByte(3); // tag int
+                            writeNBTString(out, "height");
+                            out.writeInt(element.getHeight());
+                        }
+
+                        out.writeByte(0);
+                    }
+
+                    out.writeByte(0);
+                }
+                else if (obj instanceof CheckBox element) {
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "type");
+                    writeNBTString(out, element.getType());
+
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "key");
+                    writeNBTString(out, element.getKey());
+
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "label");
+                    writeNBTString(out, element.getText());
+
+                    if (element.isChecked()) {
+                        out.writeByte(1); // tag byte
+                        writeNBTString(out, "initial");
+                        out.writeBoolean(element.isChecked());
+                    }
+
+                    if (!element.getWhenFalse().isEmpty()) {
+                        out.writeByte(8); // tag string
+                        writeNBTString(out, "on_false");
+                        writeNBTString(out, element.getWhenFalse());
+                    }
+
+                    if (!element.getWhenTrue().isEmpty()) {
+                        out.writeByte(8); // tag string
+                        writeNBTString(out, "on_true");
+                        writeNBTString(out, element.getWhenFalse());
+                    }
+
+                    out.writeByte(0);
+                }
+                else if (obj instanceof SingleOption element) {
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "type");
+                    writeNBTString(out, element.getType());
+
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "key");
+                    writeNBTString(out, element.getKey());
+
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "label");
+                    writeNBTString(out, element.getText());
+
+                    if (!element.isLabelVisible()) {
+                        out.writeByte(1); // tag byte
+                        writeNBTString(out, "label_visible");
+                        out.writeBoolean(element.isLabelVisible());
+                    }
+
+                    if (element.getWidth() != 200) {
+                        out.writeByte(3); // tag int
+                        writeNBTString(out, "width");
+                        out.writeInt(element.getWidth());
+                    }
+
+                    if (!element.getOptions().isEmpty()) {
+                        out.writeByte(9);
+                        writeNBTString(out, "options");
+                        out.writeByte(10);
+                        out.writeInt(element.getOptions().size());
+
+                        for (SingleOption.Option opt : element.getOptions()) {
+                            out.writeByte(8);
+                            writeNBTString(out, "id");
+                            writeNBTString(out, opt.getId());
+
+                            out.writeByte(8);
+                            writeNBTString(out, "display");
+                            writeNBTString(out, opt.getDisplay());
+
+                            if (opt.isInitial()) {
+                                out.writeByte(1);
+                                writeNBTString(out, "initial");
+                                out.writeBoolean(true);
+                            }
+
+                            out.writeByte(0);
+                        }
+
+                        out.writeByte(0);
+                    }
+                }
+                else if (obj instanceof NumberRange element) {
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "type");
+                    writeNBTString(out, element.getType());
+
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "key");
+                    writeNBTString(out, element.getKey());
+
+                    out.writeByte(8); // tag string
+                    writeNBTString(out, "label");
+                    writeNBTString(out, element.getText());
+
+                    if (!element.isLabelVisible()) {
+                        out.writeByte(1); // tag byte
+                        writeNBTString(out, "label_visible");
+                        out.writeBoolean(false);
+                    }
+
+                    if (!element.getLabelFormat().equals("options.generic_value")) {
+                        out.writeByte(8); // tag string
+                        writeNBTString(out, "label_format");
+                        writeNBTString(out, element.getLabelFormat());
+                    }
+
+                    if (element.getWidth() != 200) {
+                        out.writeByte(3); // tag int
+                        writeNBTString(out, "width");
+                        out.writeInt(element.getWidth());
+                    }
+
+                    out.writeByte(5); // tag float
+                    writeNBTString(out, "start");
+                    out.writeFloat(element.getStart());
+
+                    out.writeByte(5); // tag float
+                    writeNBTString(out, "end");
+                    out.writeFloat(element.getEnd());
+
+                    if (element.getStep() != -1f) {
+                        out.writeByte(5); // tag float
+                        writeNBTString(out, "step");
+                        out.writeFloat(element.getStep());
+                    }
+
+                    if (element.hasInitial()) {
+                        out.writeByte(5); // tag float
+                        writeNBTString(out, "initial");
+                        out.writeFloat(element.getInitial());
+                    }
+
+                    out.writeByte(0);
+                }
+            }
+        }
+
+        if (dialog.getType() == DialogType.MULTI_ACTION) {
+            out.writeByte(9);
             writeNBTString(out, "actions");
             out.writeByte(10);
 
@@ -110,6 +313,16 @@ public class ClientboundShowDialog implements MinecraftPacket {
             out.writeByte(1); // tag byte
             writeNBTString(out, "can_close_with_escape");
             out.writeBoolean(dialog.isCloseable());
+        }
+
+        if (dialog.getCloseAction() != Dialog.CloseAction.CLOSE) {
+            out.writeByte(8); // tag string
+            writeNBTString(out, "after_action");
+            switch (dialog.getCloseAction()) {
+                case NONE -> writeNBTString(out, "none");
+                case CLOSE -> writeNBTString(out, "close");
+                case WAIT_FOR_RESPONSE -> writeNBTString(out, "wait_for_response");
+            }
         }
 
 

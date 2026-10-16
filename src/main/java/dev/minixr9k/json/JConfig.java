@@ -22,7 +22,7 @@ public class JConfig {
     public ResourcePackConf resourcepack = new ResourcePackConf();
     public ProxyConf proxy = new ProxyConf();
     public FeaturesConf features = new FeaturesConf();
-    public Location spawnPosition = new Location(0, 112, 0);
+    public Location spawnPosition = new Location(0, 4, 0);
     public Map<String, Integer> operators = new HashMap<>();
 
     public static class ResourcePackConf {

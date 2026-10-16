@@ -1,10 +1,9 @@
 package dev.minixr9k.handlers;
 
+import dev.minixr9k.MiniCore;
 import dev.minixr9k.api.EventBus;
 import dev.minixr9k.api.event.PacketReceiveEvent;
 import dev.minixr9k.config.Configuration;
-import dev.minixr9k.packets.confAndPlay.ClientboundResourcepackPush;
-import dev.minixr9k.packets.confAndPlay.ClientboundUpdateTags;
 import dev.minixr9k.packets.confAndPlay.serverbound.ServerboundPluginMessage;
 import dev.minixr9k.packets.configuration.ClientboundFinishConfiguration;
 import dev.minixr9k.packets.configuration.ClientboundKnownPacks;
@@ -19,11 +18,6 @@ import dev.minixr9k.utils.ProtocolUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.UUID;
 
 public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
 
@@ -88,7 +82,7 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
         else if (packet instanceof ServerboundPluginMessage) {
             if (((ServerboundPluginMessage) packet).getChannel().equals("minecraft:brand")) {
                 if (Configuration.get().features.logBrand)
-                    System.out.println("[Core/Brand] " + player.getUsername() + " using " + ((ServerboundPluginMessage) packet).getData());
+                    MiniCore.getLogger().info("[Core/Brand] " + player.getUsername() + " using " + ((ServerboundPluginMessage) packet).getData());
                 player.setBrand(((ServerboundPluginMessage) packet).getData());
             }
         }
@@ -124,10 +118,9 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
                 || (msg != null && (msg.contains("Connection reset") || msg.contains("Broken pipe")));
 
         if (isReset) {
-            System.out.println("[Configuration/Disconnect] " + username + " lost connection: Connection reset by peer\n");
+            MiniCore.getLogger().info("[Configuration/Disconnect] " + username + " lost connection: Connection reset by peer\n");
         } else {
-            System.out.printf("[Configuration] Exception in channel for %s: %s%n\n", username, msg);
-            cause.printStackTrace();
+            MiniCore.getLogger().info(String.format("[Configuration] Exception in channel for %s: %s%n\n", username, msg));
         }
 
         ctx.close();

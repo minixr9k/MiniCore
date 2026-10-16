@@ -1,6 +1,6 @@
 package dev.minixr9k.packets.beta.play;
 
-import dev.minixr9k.api.chunk.Chunk;
+import dev.minixr9k.chunk.Chunk;
 import dev.minixr9k.utils.BetaPacket;
 import io.netty.buffer.ByteBuf;
 
@@ -147,8 +147,7 @@ public class MapChunk33Packet implements BetaPacket {
         if (id == 10) return 3; // dirt
         if (id == 14) return 4; // cobblestone
         if (id == 15) return 5; // oak_planks
-        if (id == 85) return 5; // oak_planks
-        if (id == 136) return 7; // bedrock
+        if (id == 85) return 7; // bedrock
         if (id == 137) return 17; // oak_log
         if (id == 138) return 17; // oak_log
         if (id == 255) return 18; // oak_leaves

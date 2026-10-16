@@ -1,5 +1,6 @@
 package dev.minixr9k.handlers;
 
+import dev.minixr9k.MiniCore;
 import dev.minixr9k.auth.PlayerProfile;
 import dev.minixr9k.config.Configuration;
 import dev.minixr9k.features.SkinCache;
@@ -20,12 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.UUID;
@@ -46,7 +43,7 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
     public void handlerAdded(ChannelHandlerContext ctx) {
         if (protocolVersion != Configuration.get().features.mainProtocol) {
             if (Configuration.get().features.debug)
-                System.out.println("[Core/Login] подключение с версией протокола " + protocolVersion);
+                MiniCore.getLogger().info("[Core/Login] подключение с версией протокола " + protocolVersion);
             new ClientboundLoginDisconnect("Для подключения используйте версию 1.21.8").send(ctx, protocolVersion);
             ctx.close();
         }
@@ -108,7 +105,7 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
                 SkinCache.put(uuid, properties);
             }
 
-            System.out.println("[Core/Login] UUID of player " + username + " is " + uuid);
+            MiniCore.getLogger().info("[Core/Login] UUID of player " + username + " is " + uuid);
 
             new ClientboundLoginSuccessPacket(uuid, username).send(ctx, protocolVersion, player);
         }
@@ -140,12 +137,12 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
                         SkinCache.put(uuid, forwardedData.properties);
                     }
 
-                    System.out.println("[Core/Velocity] UUID of player " + player.getUsername() + " is " + player.getUuid());
+                    MiniCore.getLogger().info("[Core/Velocity] UUID of player " + player.getUsername() + " is " + player.getUuid());
 
                     new ClientboundLoginSuccessPacket(uuid, username).send(ctx, protocolVersion, player);
                 } catch (Exception e) {
                     if (Configuration.get().features.debug)
-                        System.err.println("Failed to verify Velocity payload: " + e.getMessage());
+                        MiniCore.getLogger().error("Failed to verify Velocity payload: " + e.getMessage());
                     disconnect(ctx, "-", "Invalid proxy response");
                 }
             }
@@ -163,7 +160,7 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
     private void disconnect(ChannelHandlerContext ctx, String username, String reason) {
         new ClientboundLoginDisconnect(reason).send(ctx, protocolVersion);
         ctx.close();
-        System.out.println("[Core/Login] [" + ctx.channel().remoteAddress().toString() + "] Disconnecting " + username + " cause: " + reason);
+        MiniCore.getLogger().info("[Core/Login] [" + ctx.channel().remoteAddress().toString() + "] Disconnecting " + username + " cause: " + reason);
     }
 
     @Override
@@ -177,9 +174,9 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
                 || (msg != null && (msg.contains("Connection reset") || msg.contains("Broken pipe")));
 
         if (isReset) {
-            System.out.println("[Login/Disconnect] " + username + " lost connection: Connection reset by peer\n");
+            MiniCore.getLogger().info("[Login/Disconnect] " + username + " lost connection: Connection reset by peer");
         } else {
-            System.out.printf("[Login] Exception in channel for %s: %s%n\n", username, msg);
+            MiniCore.getLogger().info(String.format("[Login] Exception in channel for %s: %s%n\n", username, msg));
             cause.printStackTrace();
         }
 

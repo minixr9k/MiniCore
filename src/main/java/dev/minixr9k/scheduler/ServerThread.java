@@ -1,4 +1,4 @@
-package dev.minixr9k.network;
+package dev.minixr9k.scheduler;
 
 import dev.minixr9k.MiniCore;
 import java.util.concurrent.locks.LockSupport;

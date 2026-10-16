@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.minixr9k.MiniCore;
 import dev.minixr9k.api.EventBus;
 import dev.minixr9k.api.event.HandshakeEvent;
 import dev.minixr9k.auth.PlayerProfile;
@@ -42,14 +43,14 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
 
         if (packetLength > 2048) {
             if (Configuration.get().features.debug)
-                System.out.println("[Xr9kCore] Пакет ооооочень огромный! (Handshake)");
+                MiniCore.getLogger().info("[Xr9kCore] Пакет ооооочень огромный! (Handshake)");
             ctx.close();
             return;
         }
 
         if (packetLength > 256 && !Configuration.get().proxy.enabled) {
             if (Configuration.get().features.debug)
-                System.out.println("[Xr9kCore] Пакет слишком огромный! (Handshake)");
+                MiniCore.getLogger().info("[Xr9kCore] Пакет слишком огромный! (Handshake)");
             ctx.close();
             return;
         }
@@ -77,8 +78,7 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
                 }
 
             } catch (Throwable t) {
-                System.err.println("Ошибка при создании или чтении пакета 0x" + Integer.toHexString(packetId));
-                t.printStackTrace();
+                MiniCore.getLogger().error("Ошибка при создании или чтении пакета 0x" + Integer.toHexString(packetId) + " " + t);
             }
         }
     }
@@ -91,7 +91,7 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
             int nextState = ((Handshake) packet).getNextState();
 
             if (Configuration.get().features.debug)
-                System.out.println(packet);
+                MiniCore.getLogger().info(packet.toString());
 
             EventBus.getInstance().callEvent(new HandshakeEvent(ctx, protocolVersion, serverAddress, serverPort, nextState));
 
@@ -161,7 +161,7 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
                 }
                 default -> {
                     if (Configuration.get().features.debug)
-                        System.out.println("Unknown state requested: " + nextState);
+                        MiniCore.getLogger().info("Unknown state requested: " + nextState);
                     ctx.close();
                 }
             }
@@ -182,7 +182,7 @@ public class HandshakeState extends SimpleChannelInboundHandler<ByteBuf> {
         new ClientboundLoginDisconnect(reason).send(ctx, protocolVersion);
         ctx.close();
         if (Configuration.get().features.logHandshakeState)
-            System.out.println("[Core/Handshake] [" + ctx.channel().remoteAddress().toString() + "] Disconnecting cause: " + reason);
+            MiniCore.getLogger().info("[Core/Handshake] [" + ctx.channel().remoteAddress().toString() + "] Disconnecting cause: " + reason);
     }
 
     @Override

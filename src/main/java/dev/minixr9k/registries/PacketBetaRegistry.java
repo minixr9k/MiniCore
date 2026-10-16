@@ -23,6 +23,7 @@ public class PacketBetaRegistry {
         packets.put(0x0B, PlayerPosition11Packet.class);
         packets.put(0x0C, PlayerLook12Packet.class);
         packets.put(0x0D, PlayerPositionAndLook13Packet.class);
+        packets.put(0x0E, PlayerBreakBlock14Packet.class);
         packets.put(0x14, NamedEntitySpawn20Packet.class);
         packets.put(0x1D, DestroyEntity29Packet.class);
         packets.put(0x22, EntityTeleport34Packet.class);

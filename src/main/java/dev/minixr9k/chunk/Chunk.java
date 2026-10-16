@@ -1,4 +1,4 @@
-package dev.minixr9k.api.chunk;
+package dev.minixr9k.chunk;
 
 import dev.minixr9k.config.Configuration;
 
@@ -24,6 +24,9 @@ public class Chunk {
             case "FLAT" -> {
                 generateFlatTerrain();
             }
+            case "FLAT/OLD" -> {
+                generateFlatOldTerrain();
+            }
             case "FLAT/MINICORE" -> {
                 generateDefaultTerrain();
             }
@@ -36,6 +39,24 @@ public class Chunk {
     private void generateFlatTerrain() {
         int sectionTarget = 0;
         int startWorldY = (sectionTarget * 16) - 64;
+
+        for (int localX = 0; localX < 16; localX++) {
+            for (int localZ = 0; localZ < 16; localZ++) {
+                // Бедрок
+                setBlockAt(localX, startWorldY, localZ, (short) 85);
+                // Земля
+                for (int y = 1; y <= 2; y++) {
+                    setBlockAt(localX, startWorldY + y, localZ, (short) 10);
+                }
+                // Трава
+                setBlockAt(localX, startWorldY + 3, localZ, (short) 9);
+            }
+        }
+    }
+
+    private void generateFlatOldTerrain() {
+        int sectionTarget = 0;
+        int startWorldY = (sectionTarget * 16);
 
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {

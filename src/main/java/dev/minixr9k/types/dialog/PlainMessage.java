@@ -10,9 +10,9 @@ public class PlainMessage {
         this.contents = contents;
     }
 
-    public PlainMessage(String contents, int width) {
-        this.contents = contents;
+    public PlainMessage width(int width) {
         this.width = width;
+        return this;
     }
 
     public String getType() {

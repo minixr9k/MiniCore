@@ -3,6 +3,7 @@ package dev.minixr9k.types;
 import dev.minixr9k.auth.PlayerProfile;
 import dev.minixr9k.features.World;
 import dev.minixr9k.packets.beta.play.ChatMessage3Packet;
+import dev.minixr9k.packets.beta.play.Disconnect255Packet;
 import dev.minixr9k.packets.beta.play.PlayerPositionAndLook13Packet;
 import dev.minixr9k.packets.beta.play.TimeUpdate4Packet;
 import dev.minixr9k.packets.confAndPlay.ClientboundDisconnect;
@@ -276,6 +277,17 @@ public class Player extends Entity {
         new ClientboundGameEvent(eventId, value).send(ctx, protocolVersion, this);
     }
 
+    public void setAttribute(String attribute, double value) {
+        World.updateAttribute(getEntityId(), attribute, value);
+    }
+
+    public void setLocalAttribute(String attribute, double value) {
+        new ClientboundUpdateAttributes(1, attribute, value).send(ctx, protocolVersion, this);
+    }
+
+//    public void resetAttribute(String attribute) {
+//    }
+
     public void sendPluginMessage(String channel, ByteBuf buf) {
         // "bungeecord:main", "Connect", "auth"
         new ClientboundPluginMessage(channel, buf).send(ctx, protocolVersion, this);
@@ -290,6 +302,11 @@ public class Player extends Entity {
     }
 
     public void kick(String reason) {
+        if (protocolVersion < 99) {
+            new Disconnect255Packet(reason).send(ctx, protocolVersion, this);
+            ctx.close();
+            return;
+        }
         new ClientboundDisconnect(reason).send(ctx, protocolVersion, this);
         ctx.close();
     }
@@ -313,6 +330,10 @@ public class Player extends Entity {
                 new ClientboundEntityEvent(1, (byte) 28).send(ctx, protocolVersion, this);
                 break;
         }
+    }
+
+    public void setOpLevelNoPacket(int opLevel) {
+        this.opLevel = opLevel;
     }
 
     public int getOpLevel() { return opLevel; }

@@ -1,15 +1,14 @@
 package dev.minixr9k.features;
 
 import dev.minixr9k.MiniCore;
-import dev.minixr9k.api.chunk.Chunk;
-import dev.minixr9k.api.chunk.ZRegionChunkManager;
+import dev.minixr9k.chunk.Chunk;
+import dev.minixr9k.chunk.ZRegionChunkManager;
 import dev.minixr9k.auth.PlayerProfile;
 import dev.minixr9k.packets.beta.play.*;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.registries.BlockRegistry;
 import dev.minixr9k.types.*;
 import dev.minixr9k.types.textdisplay.TextDisplay;
-import io.netty.channel.ChannelHandlerContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -173,7 +172,7 @@ public class World {
     }
 
     public static void broadcast(String message) {
-        System.out.println("[In-game/Chat] " + message);
+        MiniCore.getLogger().info("[In-game/Chat] " + message);
         for (Player player : players) {
             player.sendMessage(message);
         }
@@ -210,11 +209,21 @@ public class World {
         }
     }
 
+    public static void updateAttribute(int entityId, String attribute, double value) {
+        for (Player p : players) {
+            if (p.getEntityId() == entityId)
+                new ClientboundUpdateAttributes(1, attribute, value).send(p.getCtx(), p.getProtocolVersion(), p);
+            else
+                new ClientboundUpdateAttributes(entityId, attribute, value).send(p.getCtx(), p.getProtocolVersion(), p);
+        }
+    }
+
     public static void swing(Player player, int animation) {
         for (Player p : players) {
             if (p.getCtx() == player.getCtx()) continue;
             if (p.getProtocolVersion() < 99) {
-                // TODO beta1.7.3 swing
+                // swing arm
+                new PlayerAnimation18Packet(player.getEntityId(), 1).send(p.getCtx(), p.getProtocolVersion());
                 continue;
             }
             new ClientboundEntityAnimation(player.getEntityId(), (byte)animation).send(p.getCtx(), p.getProtocolVersion(), p);
@@ -536,30 +545,27 @@ public class World {
     public static void initWorld(int chunkRadius, int grassRadius) {
         try {
             if (WORLD_DIR.exists() && WORLD_DIR.list().length > 0) {
-                System.out.println("[ChunkHolder] Папка сохранений найдена. Загружаем чанки...");
+                MiniCore.getLogger().info("[ChunkHolder] Папка сохранений найдена. Загружаем чанки...");
                 Map<String, Chunk> loaded = ZRegionChunkManager.loadWorld(WORLD_DIR);
                 chunks.putAll(loaded);
             } else {
-                System.out.println("[ChunkHolder] Сохранения не найдены. Генерируем новый мир...");
+                MiniCore.getLogger().info("[ChunkHolder] Сохранения не найдены. Генерируем новый мир...");
                 generateWorld(chunkRadius, grassRadius);
                 saveWorld(); // Сразу сохраним свежесгенерированный
             }
         } catch (IOException e) {
-            System.err.println("[ChunkHolder] Ошибка при работе с файлами мира! Генерируем во временную память...");
-            e.printStackTrace();
+            MiniCore.getLogger().error("[ChunkHolder] Ошибка при работе с файлами мира! Генерируем во временную память... " + e);
             generateWorld(chunkRadius, grassRadius);
         }
     }
 
-    // Сохранить текущее состояние
     public static void saveWorld() {
         try {
-            System.out.println("[ChunkHolder] Запуск сохранения чанков в формате ZRegion...");
+            MiniCore.getLogger().info("[ChunkHolder] Запуск сохранения чанков в формате ZRegion...");
             ZRegionChunkManager.saveWorld(chunks, WORLD_DIR);
-            System.out.println("[ChunkHolder] Мир успешно сохранен!");
+            MiniCore.getLogger().info("[ChunkHolder] Мир успешно сохранен!");
         } catch (IOException e) {
-            System.err.println("[ChunkHolder] Критическая ошибка при сохранении мира!");
-            e.printStackTrace();
+            MiniCore.getLogger().info("[ChunkHolder] Критическая ошибка при сохранении мира! " + e);
         }
     }
 

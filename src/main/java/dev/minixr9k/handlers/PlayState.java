@@ -12,6 +12,7 @@ import dev.minixr9k.network.handlers.*;
 import dev.minixr9k.packets.confAndPlay.ClientboundResourcepackPush;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.types.*;
+import dev.minixr9k.types.dialog.*;
 import dev.minixr9k.types.textdisplay.TextDisplay;
 import dev.minixr9k.utils.Requests;
 import io.netty.buffer.ByteBuf;
@@ -140,7 +141,7 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
             case 0x41 -> interactionHandler.handleCustomClickAction(ctx, in);
             default -> {
                 if (Configuration.get().features.debug && packetId != 0xC)
-                    System.out.println("[Core/Debug] Unknown packet: " + Integer.toHexString(packetId));
+                    MiniCore.getLogger().info("[Core/Debug] Unknown packet: " + Integer.toHexString(packetId));
                 in.skipBytes(in.readableBytes());
             }
         }
@@ -149,7 +150,7 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
     private void handleTeleport(ByteBuf in) {
         int id = readVarInt(in);
         if (Configuration.get().features.debug)
-            System.out.println("[Core/Debug] Teleport confirmed! id=" + id);
+            MiniCore.getLogger().info("[Core/Debug] Teleport confirmed! id=" + id);
     }
 
     private void handleChangeGamemode(ByteBuf in) {
@@ -219,10 +220,9 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
                 || (msg != null && (msg.contains("Connection reset") || msg.contains("Broken pipe")));
 
         if (isReset) {
-            System.out.println("[In-game/Disconnect] " + username + " lost connection: Connection reset by peer\n");
+            MiniCore.getLogger().info("[In-game/Disconnect] " + username + " lost connection: Connection reset by peer\n");
         } else {
-            System.out.printf("[In-game] Exception in channel for %s: %s%n\n", username, msg);
-            cause.printStackTrace();
+            MiniCore.getLogger().info(String.format("[In-game] Exception in channel for %s: %s%n\n", username, msg));
         }
 
         ctx.close();

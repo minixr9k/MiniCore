@@ -70,6 +70,10 @@ public class PlayerChatHandler {
 
         if (!Configuration.get().features.buildInCommands) return;
 
+        executeCommand(player, command);
+    }
+
+    public void executeCommand(Player player, String command) {
         if (command.startsWith("reload")) {
             if (player.getOpLevel() < 4) {
                 player.sendMessage("Требуется 4 уровень оп для выполнения данной команды!");

@@ -1,6 +1,7 @@
-package dev.minixr9k.api.chunk;
+package dev.minixr9k.chunk;
 
 import com.github.luben.zstd.Zstd;
+import dev.minixr9k.MiniCore;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -117,7 +118,7 @@ public class ZRegionChunkManager {
             System.arraycopy(compressedBytes, 0, finalFileBytes, headerBytes.length, compressedBytes.length);
 
             Files.write(file.toPath(), finalFileBytes);
-            System.out.println("[Core/World] Успешно сохранен регион: " + file.getName() + " | Размер: " + finalFileBytes.length + " байт");
+            MiniCore.getLogger().info("[Core/World] Успешно сохранен регион: " + file.getName() + " | Размер: " + finalFileBytes.length + " байт");
 
         } finally {
             headerBuf.release();
@@ -205,7 +206,7 @@ public class ZRegionChunkManager {
             uncompressedBuf.release();
         }
 
-        System.out.println("[Core/World] Загружен регион: " + file.getName() + " | Найдено чанков: " + regionChunks.size());
+        MiniCore.getLogger().info("[Core/World] Загружен регион: " + file.getName() + " | Найдено чанков: " + regionChunks.size());
         return regionChunks;
     }
 }

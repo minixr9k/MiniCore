@@ -1,6 +1,6 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.api.chunk.Chunk;
+import dev.minixr9k.chunk.Chunk;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 

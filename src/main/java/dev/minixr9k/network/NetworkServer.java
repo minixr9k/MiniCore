@@ -1,5 +1,6 @@
-package dev.minixr9k;
+package dev.minixr9k.network;
 
+import dev.minixr9k.MiniCore;
 import dev.minixr9k.handlers.HandshakeState;
 import dev.minixr9k.network.codec.MinecraftFrameDecoder;
 import dev.minixr9k.utils.ClientType;
@@ -26,7 +27,7 @@ public class NetworkServer {
     public void start() {
         boolean useEpoll = Epoll.isAvailable();
 
-        System.out.println("[Core/Network] Ивент-луп выбран: " + (useEpoll ? "Epoll (Linux Native)" : "NIO (Java)"));
+        MiniCore.getLogger().info("[Core/Network] Ивент-луп выбран: " + (useEpoll ? "Epoll (Linux Native)" : "NIO (Java)"));
 
         bossGroup = useEpoll ? new EpollEventLoopGroup(1) : new NioEventLoopGroup(1);
         workerGroup = useEpoll ? new EpollEventLoopGroup(4) : new NioEventLoopGroup(4);
@@ -44,7 +45,7 @@ public class NetworkServer {
                     });
 
             ChannelFuture f = b.bind(port).sync();
-            System.out.println("[Core/Done] Server bound to port " + port);
+            MiniCore.getLogger().info("[Core/Done] Server bound to port " + port);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
