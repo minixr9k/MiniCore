@@ -1,6 +1,7 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.registries.SoundRegistry;
+import dev.minixr9k.registries.Registry;
+import dev.minixr9k.types.registry.RegistryType;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 
@@ -27,7 +28,7 @@ public class ClientboundSoundEntity implements MinecraftPacket {
 
     @Override
     public void write(ByteBuf out, int protocolVersion) {
-        int soundId = SoundRegistry.getSound(sound, protocolVersion) + 1;
+        int soundId = Registry.getId(sound, RegistryType.SOUNDS, protocolVersion) + 1;
         writeVarInt(out, soundId);
         if (soundId == 0) {
             writeString(out, sound);

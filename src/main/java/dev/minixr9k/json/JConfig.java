@@ -44,8 +44,8 @@ public class JConfig {
     }
 
     public static class MotdConf {
-        public String text = "A MiniCore server (1.21.8)";
-        public int maxPlayers = -1;
+        public String text = "A MiniCore server";
+        public int maxPlayers = 20;
     }
 
     public static class WorldConf {
@@ -74,7 +74,6 @@ public class JConfig {
         public int mainProtocol = 772;
         public boolean fixBoatFly = true;
         public boolean illegalCharactersCheck = true;
-        public boolean pingSameProtocol = true;
         public boolean buildInMessages = true;
     }
 

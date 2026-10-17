@@ -346,6 +346,7 @@ public class World {
     public static void setLocalBlock(int x, int y, int z, String blockType, Player p) {
         int blockId = BlockRegistry.getBlock(blockType, 772);
         if (blockId == -1) return;
+        System.out.println("id=" + blockId);
 
         if (p.getProtocolVersion() < 99) {
             new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);

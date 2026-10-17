@@ -1,6 +1,5 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.registries.SoundRegistry;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 

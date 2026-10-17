@@ -1,6 +1,7 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.registries.EffectRegistry;
+import dev.minixr9k.registries.Registry;
+import dev.minixr9k.types.registry.RegistryType;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 
@@ -24,7 +25,7 @@ public class ClientboundEntityEffect implements MinecraftPacket {
 
     @Override
     public void write(ByteBuf out, int protocolVersion) {
-        int effectId = EffectRegistry.getEffect(effect, protocolVersion);
+        int effectId = Registry.getId(effect, RegistryType.EFFECTS, protocolVersion);
         writeVarInt(out, entityId);
         writeVarInt(out, effectId);
         writeVarInt(out, amplifier);

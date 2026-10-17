@@ -96,6 +96,8 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
                     player.updateInventory(0);
 
                     new ClientboundCommands(List.of()).send(ctx, protocolVersion, player);
+
+                    player.playSound("minecraft:custom.aether.music.aether1", 1.0f, 1.0f);
                 });
 
             } catch (Exception e) {

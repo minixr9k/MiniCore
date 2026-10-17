@@ -1,8 +1,10 @@
 package dev.minixr9k.packets.play;
 
 import dev.minixr9k.registries.ItemRegistry;
+import dev.minixr9k.registries.Registry;
 import dev.minixr9k.types.Inventory;
 import dev.minixr9k.types.ItemStack;
+import dev.minixr9k.types.registry.RegistryType;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 
@@ -39,7 +41,7 @@ public class ClientboundSetEquipmentList implements MinecraftPacket {
                 out.writeBoolean(false);
             else {
                 writeVarInt(out, itemStack.getCount()); // item count
-                int item = ItemRegistry.getItem(itemStack.getType(), protocolVersion);
+                int item = Registry.getId(itemStack.getType(), RegistryType.ITEMS, protocolVersion);
                 writeVarInt(out, item); // item id
                 out.writeBoolean(false);
                 out.writeBoolean(false);

@@ -52,7 +52,7 @@ public class PlayerChatHandler {
         int length = readVarInt(in);
 
         if (Configuration.get().features.debug) {
-            System.out.println("[Core/Debug] recv command packet, length=" + length);
+            MiniCore.getLogger().info("[Core/Debug] recv command packet, length=" + length);
         }
 
         if (length > 256) {
@@ -66,7 +66,7 @@ public class PlayerChatHandler {
         EventBus.getInstance().callEvent(new PlayerCommandEvent(player, command));
 
         if (Configuration.get().features.logCommands)
-            System.out.println("[In-game/Chat] " + player.getUsername() + " использует /" + command);
+            MiniCore.getLogger().info("[In-game/Chat] " + player.getUsername() + " использует /" + command);
 
         if (!Configuration.get().features.buildInCommands) return;
 
@@ -128,7 +128,7 @@ public class PlayerChatHandler {
         }
 
         if (command.equals("setblock")) {
-            World.setLocalBlock(1, -60, 1, 1062, player);
+            World.setLocalBlock(-1, 5, 2, "minecraft:note_block[instrument=xylophone,note=5,powered=false]", player);
         }
     }
 }

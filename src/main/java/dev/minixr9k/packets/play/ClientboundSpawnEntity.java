@@ -1,6 +1,7 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.registries.EntityRegistry;
+import dev.minixr9k.registries.Registry;
+import dev.minixr9k.types.registry.RegistryType;
 import dev.minixr9k.utils.MinecraftPacket;
 import dev.minixr9k.utils.ProtocolUtils;
 import io.netty.buffer.ByteBuf;
@@ -50,7 +51,7 @@ public class ClientboundSpawnEntity implements MinecraftPacket {
     public void write(ByteBuf out, int protocolVersion) {
         writeVarInt(out, entityId);
         ProtocolUtils.writeUUID(out, entityUuid);
-        int entityType = EntityRegistry.getEntity(type, protocolVersion);
+        int entityType = Registry.getId(type, RegistryType.ENTITIES, protocolVersion);
         writeVarInt(out, entityType);
 
         out.writeDouble(x);

@@ -1,9 +1,9 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.registries.ComponentsRegistry;
-import dev.minixr9k.registries.ItemRegistry;
+import dev.minixr9k.registries.Registry;
 import dev.minixr9k.types.ItemComponent;
 import dev.minixr9k.types.ItemStack;
+import dev.minixr9k.types.registry.RegistryType;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 
@@ -41,7 +41,7 @@ public class ClientboundContainerSetContent implements MinecraftPacket {
         if (item == null || item.getCount() <= 0 || "minecraft:air".equalsIgnoreCase(item.getType())) {
             out.writeBoolean(false); // Слот пустой
         } else {
-            int itemId = ItemRegistry.getItem(item.getType(), protocolVersion);
+            int itemId = Registry.getId(item.getType(), RegistryType.ITEMS, protocolVersion);
             writeVarInt(out, item.getCount());
             writeVarInt(out, itemId);
 
@@ -52,7 +52,7 @@ public class ClientboundContainerSetContent implements MinecraftPacket {
                 writeVarInt(out, item.getComponents().size());
                 for (ItemComponent component : item.getComponents()) {
                     // ID компонента
-                    writeVarInt(out, ComponentsRegistry.getComponent(component.getComponentType(), protocolVersion));
+                    writeVarInt(out, Registry.getId(component.getComponentType(), RegistryType.DATA_COMPONENTS, protocolVersion));
 
                     encodeComponent(out, component);
                 }

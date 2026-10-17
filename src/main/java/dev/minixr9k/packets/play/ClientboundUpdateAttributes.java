@@ -1,6 +1,7 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.registries.AttributeRegistry;
+import dev.minixr9k.registries.Registry;
+import dev.minixr9k.types.registry.RegistryType;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 
@@ -20,7 +21,7 @@ public class ClientboundUpdateAttributes implements MinecraftPacket {
 
     @Override
     public void write(ByteBuf out, int protocolVersion) {
-        int attributeId = AttributeRegistry.getAttribute(attribute, protocolVersion);
+        int attributeId = Registry.getId(attribute, RegistryType.ATTRIBUTES, protocolVersion);
         writeVarInt(out, entityId);
 
         writeVarInt(out, 1); // array

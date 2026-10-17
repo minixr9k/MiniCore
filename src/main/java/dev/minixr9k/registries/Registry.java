@@ -1,22 +1,27 @@
 package dev.minixr9k.registries;
 
 import com.google.gson.stream.JsonReader;
+import dev.minixr9k.types.registry.RegistryType;
+import dev.minixr9k.utils.VersionUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-public class SoundRegistry {
+public class Registry {
 
-    public static int getSound(String sound, int protocolVersion) {
-        String fileName = "sounds1.21.8.json";
+    // Registry.getId("minecraft:diamond_sword", RegistryType.ITEMS, player.getVersion()) -> int id
+    public static int getId(String findValue, RegistryType registryType, int protocolVersion) {
+        String detectedVersion = VersionUtils.getVersion(protocolVersion);
 
-        try (InputStream is = SoundRegistry.class.getResourceAsStream("/sounds/" + fileName)) {
+        try (InputStream is = Registry.class.getResourceAsStream(
+                String.format("/registries/%s/registries.json", detectedVersion)
+        )) {
             if (is == null) return 0;
 
             try (JsonReader reader = new JsonReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-                return findIdInStream(reader, sound);
+                return findIdInStream(reader, findValue, registryType.getIdentifier());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -24,27 +29,33 @@ public class SoundRegistry {
         }
     }
 
-    private static int findIdInStream(JsonReader reader, String targetEntity) throws Exception {
-        int pigId = -1; // Резервный ID свиньи на случай, если нужная сущность не найдена
+    private static int findIdInStream(JsonReader reader, String findValue, String registryName) throws Exception {
+        int fallback = -1;
 
         reader.beginObject();
         while (reader.hasNext()) {
             String name = reader.nextName();
-            if (name.equals("minecraft:sound_event")) {
+            if (name.equals(registryName)) {
                 reader.beginObject();
+
+                String defaultObj = null;
+
                 while (reader.hasNext()) {
                     String subName = reader.nextName();
-                    if (subName.equals("entries")) {
 
+                    if (subName.equals("default")) {
+                        defaultObj = reader.nextString();
+                    } else if (subName.equals("entries")) {
                         reader.beginObject();
                         while (reader.hasNext()) {
-                            String entityName = reader.nextName();
+                            String objectName = reader.nextName();
 
-                            if (entityName.equalsIgnoreCase(targetEntity)) {
-                                // Нашли нужную сущность — мгновенно возвращаем ID!
+                            if (objectName.equalsIgnoreCase(findValue)) {
                                 return readProtocolId(reader);
+                            }
+                            else if (defaultObj != null && objectName.equalsIgnoreCase(defaultObj)) {
+                                fallback = readProtocolId(reader);
                             } else {
-                                // Пропускаем чужие сущности без создания объектов в памяти
                                 reader.skipValue();
                             }
                         }
@@ -60,8 +71,7 @@ public class SoundRegistry {
         }
         reader.endObject();
 
-        // Если искомая сущность не была найдена во всем файле, возвращаем ID свиньи
-        return pigId;
+        return fallback;
     }
 
     private static int readProtocolId(JsonReader reader) throws IOException {
@@ -78,4 +88,5 @@ public class SoundRegistry {
         reader.endObject();
         return id;
     }
+
 }

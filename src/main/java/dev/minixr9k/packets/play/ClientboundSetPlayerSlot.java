@@ -1,13 +1,11 @@
 package dev.minixr9k.packets.play;
 
-import dev.minixr9k.registries.ComponentsRegistry;
-import dev.minixr9k.registries.ItemRegistry;
+import dev.minixr9k.registries.Registry;
 import dev.minixr9k.types.ItemComponent;
 import dev.minixr9k.types.ItemStack;
+import dev.minixr9k.types.registry.RegistryType;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
-
-import java.util.UUID;
 
 import static dev.minixr9k.utils.ProtocolUtils.*;
 
@@ -25,7 +23,7 @@ public class ClientboundSetPlayerSlot implements MinecraftPacket {
     public void write(ByteBuf out, int protocolVersion) {
         writeVarInt(out, slot); // item slot
         writeVarInt(out, itemStack.getCount()); // item count
-        int item = ItemRegistry.getItem(itemStack.getType(), protocolVersion);
+        int item = Registry.getId(itemStack.getType(), RegistryType.ITEMS, protocolVersion);
         writeVarInt(out, item); // item id
         if (itemStack.getComponents() != null && !itemStack.getComponents().isEmpty()) {
             out.writeBoolean(true);
@@ -34,7 +32,7 @@ public class ClientboundSetPlayerSlot implements MinecraftPacket {
             writeVarInt(out, itemStack.getComponents().size());
             for (ItemComponent component : itemStack.getComponents()) {
                 // ID компонента
-                writeVarInt(out, ComponentsRegistry.getComponent(component.getComponentType(), protocolVersion));
+                writeVarInt(out, Registry.getId(component.getComponentType(), RegistryType.DATA_COMPONENTS, protocolVersion));
 
                 encodeComponent(out, component);
             }
