@@ -11,6 +11,8 @@ public class RegisteredListener implements Comparable<RegisteredListener> {
         this.listener = listener;
         this.method = method;
         this.priority = priority;
+
+        this.method.setAccessible(true);
     }
 
     public void execute(Event event) throws Exception {

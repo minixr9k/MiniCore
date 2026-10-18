@@ -7,7 +7,11 @@ import static dev.minixr9k.utils.ProtocolUtils.writeVarInt;
 
 public class ClientboundCloseContainer implements MinecraftPacket {
 
-    private int windowId;
+    private final int windowId;
+
+    public ClientboundCloseContainer(int windowId) {
+        this.windowId = windowId;
+    }
 
     @Override
     public void write(ByteBuf out, int protocolVersion) {

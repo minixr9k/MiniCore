@@ -48,6 +48,9 @@ public class Player extends Entity {
     private ChannelHandlerContext ctx;
     private int protocolVersion;
 
+    private CustomContainer activeContainer = null;
+    private int containerStateId = 1;
+
     public Player(ChannelHandlerContext ctx, int protocolVersion) {
         this.ctx = ctx;
         this.protocolVersion = protocolVersion;
@@ -200,6 +203,42 @@ public class Player extends Entity {
             return;
         }
         new ClientboundSyncPlayerPos(0, x, y, z, yaw, pitch).send(ctx, protocolVersion, this);
+    }
+
+    public void openInventory(CustomContainer inventory) {
+        this.activeContainer = inventory;
+
+        ItemStack[] playerSlots = this.getInventory().getSlots();
+
+        for (int i = 0; i < 27; i++) {
+            inventory.setItem(inventory.getSize() + i, playerSlots[9 + i]);
+        }
+
+        for (int i = 0; i < 9; i++) {
+            inventory.setItem(inventory.getSize() + 27 + i, playerSlots[36 + i]);
+        }
+
+        new ClientboundOpenScreen(inventory.getWindowId(), inventory.getType(), inventory.getTitle())
+                .send(ctx, protocolVersion, this);
+
+        new ClientboundContainerSetContent(
+                inventory.getWindowId(),
+                containerStateId++,
+                inventory.getSlots(),
+                getInventory().getCarriedItem()
+        ).send(ctx, protocolVersion, this);
+    }
+
+    public CustomContainer getActiveInventory() {
+        return activeContainer;
+    }
+
+    public void closeInventory() {
+        if (this.activeContainer != null) {
+            int windowId = this.activeContainer.getWindowId();
+            this.activeContainer = null;
+            new ClientboundCloseContainer(windowId).send(ctx, protocolVersion, this);
+        }
     }
 
     @Deprecated(forRemoval = true)

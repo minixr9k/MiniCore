@@ -1,5 +1,6 @@
 package dev.minixr9k.types;
 
+import dev.minixr9k.packets.play.ClientboundContainerSetContent;
 import dev.minixr9k.packets.play.ClientboundSetPlayerSlot;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -48,6 +49,22 @@ public class Inventory {
     public void setItem(int slot, ItemStack item) {
         if (slot < 0 || slot > slots.length) return;
         slots[slot] = item;
+    }
+
+    public void addItem(ItemStack item) {
+        for (int i = 36; i < 45; i++) {
+            if (getItem(i) == null) {
+                setItem(i, item);
+                return;
+            }
+        }
+
+        for (int i = 9; i < 36; i++) {
+            if (getItem(i) == null) {
+                setItem(i, item);
+                return;
+            }
+        }
     }
 
     public void clear() {

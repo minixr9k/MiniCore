@@ -6,6 +6,7 @@ import dev.minixr9k.api.event.PlayerSetHotbarSlotEvent;
 import dev.minixr9k.config.Configuration;
 import dev.minixr9k.features.World;
 import dev.minixr9k.registries.ItemRegistry;
+import dev.minixr9k.types.CustomContainer;
 import dev.minixr9k.types.GameMode;
 import dev.minixr9k.types.ItemStack;
 import dev.minixr9k.types.Player;
@@ -64,6 +65,21 @@ public class PlayerInventoryHandler {
         int mode = readVarInt(in);
         in.skipBytes(in.readableBytes());
 
+        CustomContainer activeInv = player.getActiveInventory();
+
+        if (activeInv != null && activeInv.getWindowId() == windowId) {
+
+            InventoryClickEvent event = new InventoryClickEvent(player, windowId, stateId, slot, button, mode);
+            activeInv.handleClick(event);
+
+            if (event.isCancelled()) {
+                player.openInventory(activeInv);
+                return;
+            }
+
+            return;
+        }
+
         InventoryClickEvent event = new InventoryClickEvent(player, windowId, stateId, slot, button, mode);
 
         EventBus.getInstance().callEvent(event);
@@ -91,7 +107,7 @@ public class PlayerInventoryHandler {
                             player.getInventory().setCarriedItem(null);
                         }
                         else {
-                            if (!itemStack.getType().equals(carriedItem.getType())) {
+                            if (!itemStack.getType().equals(carriedItem.getType()) || !itemStack.hasSameComponents(carriedItem)) {
                                 // меняем местами предметы если они не одинового материала (1 в слот, другой в курсор)
                                 player.getInventory().setItem(slot, carriedItem);
                                 player.getInventory().setCarriedItem(itemStack);
@@ -106,8 +122,8 @@ public class PlayerInventoryHandler {
                                 else {
                                     // если сумма больше 64
                                     int count = itemStack.getCount() + carriedItem.getCount() - 64;
-                                    ItemStack newItemStack = new ItemStack(itemStack.getType(), (short) 64);
-                                    ItemStack newCarriedItem = new ItemStack(carriedItem.getType(), (short) count);
+                                    ItemStack newItemStack = new ItemStack(itemStack.getType(), (short) 64, itemStack.getComponents());
+                                    ItemStack newCarriedItem = new ItemStack(carriedItem.getType(), (short) count, carriedItem.getComponents());
                                     player.getInventory().setItem(slot, newItemStack);
                                     player.getInventory().setCarriedItem(newCarriedItem);
                                 }
@@ -135,13 +151,13 @@ public class PlayerInventoryHandler {
                     else {
                         if (itemStack != null) {
                             // кладем по 1 блоку в слот
-                            if (itemStack.getType().equals(carriedItem.getType())) {
+                            if (itemStack.getType().equals(carriedItem.getType()) && itemStack.hasSameComponents(carriedItem)) {
                                 if (itemStack.getCount() + 1 <= 64) {
                                     ItemStack newItemStack = new ItemStack(itemStack.getType(), (short) (itemStack.getCount() + 1), itemStack.getComponents());
                                     if (carriedItem.getCount() - 1 <= 0)
                                         player.getInventory().setCarriedItem(null);
                                     else
-                                        player.getInventory().setCarriedItem(new ItemStack(itemStack.getType(), (short) (carriedItem.getCount() - 1), itemStack.getComponents()));
+                                        player.getInventory().setCarriedItem(new ItemStack(itemStack.getType(), (short) (carriedItem.getCount() - 1), carriedItem.getComponents()));
                                     player.getInventory().setItem(slot, newItemStack);
                                 }
                             }
