@@ -5,7 +5,6 @@ import dev.minixr9k.api.EventBus;
 import dev.minixr9k.api.event.*;
 import dev.minixr9k.auth.PlayerProfile;
 import dev.minixr9k.config.Configuration;
-import dev.minixr9k.features.MiniMessage;
 import dev.minixr9k.features.SkinCache;
 import dev.minixr9k.features.World;
 import dev.minixr9k.network.handlers.*;
@@ -13,17 +12,14 @@ import dev.minixr9k.packets.confAndPlay.ClientboundResourcepackPush;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.types.*;
 import dev.minixr9k.types.dialog.*;
-import dev.minixr9k.types.textdisplay.TextDisplay;
 import dev.minixr9k.utils.Requests;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Logger;
 
 import static dev.minixr9k.features.World.*;
 import static dev.minixr9k.utils.ProtocolUtils.*;
@@ -93,12 +89,10 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
 
                     player.sendGameEvent(13, 0);
                     World.setEquipment(player);
-
-                    new ClientboundCommands(List.of()).send(ctx, protocolVersion, player);
                 });
 
             } catch (Exception e) {
-                e.printStackTrace();
+                MiniCore.getLogger().error("[Core/Play] " + e);
             }
         });
     }

@@ -1,5 +1,8 @@
 package dev.minixr9k.types;
 
+import dev.minixr9k.types.components.ConsumableComponent;
+import dev.minixr9k.types.components.FoodComponent;
+
 import java.util.List;
 
 public class ItemComponent {
@@ -60,5 +63,17 @@ public class ItemComponent {
             return List.of((String) componentValue);
         }
         return List.of();
+    }
+
+    public FoodComponent getValueAsFood() {
+        if (componentValue instanceof FoodComponent foodComponent)
+            return foodComponent;
+        return null;
+    }
+
+    public ConsumableComponent getValueAsConsumable() {
+        if (componentValue instanceof ConsumableComponent consumableComponent)
+            return consumableComponent;
+        return null;
     }
 }
