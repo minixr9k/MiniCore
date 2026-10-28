@@ -101,7 +101,8 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
         sender.sendFrogVariants(ctx);
         sender.sendPigVariants(ctx);
         sender.sendPaintingVariants(ctx);
-        if (protocolVersion >= 774) {
+
+        if (protocolVersion >= 774) { // 1.21.11
             sender.sendZombieNautilusVariants(ctx);
             sender.sendTimeLine(ctx);
         }

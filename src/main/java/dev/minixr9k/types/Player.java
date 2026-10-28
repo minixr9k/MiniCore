@@ -26,7 +26,6 @@ public class Player extends Entity {
     private boolean isAllowFlight;
     private boolean isFlying;
     private boolean isLoaded;
-    private int teleportImmunityTicks = 0;
     private int opLevel;
     private boolean isSprinting;
     private boolean isGliding;
@@ -55,6 +54,7 @@ public class Player extends Entity {
         this.ctx = ctx;
         this.protocolVersion = protocolVersion;
         setInventory(new Inventory(ctx, protocolVersion));
+        setEntityType("minecraft:player");
     }
 
     public void sendMessage(String message) {
@@ -91,7 +91,7 @@ public class Player extends Entity {
     }
 
     public void playSound(String sound, float volume, float pitch) {
-        new ClientboundSoundEntity(sound, 0, 1, volume, pitch, System.currentTimeMillis()).send(ctx, protocolVersion, this);
+        new ClientboundSoundEntity(sound, 0, getEntityId(), volume, pitch, System.currentTimeMillis()).send(ctx, protocolVersion, this);
     }
 
     public void stopSound(String sound) {
@@ -111,15 +111,15 @@ public class Player extends Entity {
     }
 
     public void addPotionEffect(String effect, int duration, int amplifier) {
-        new ClientboundEntityEffect(1, effect, amplifier, duration, (byte) 0x00).send(ctx, protocolVersion, this);
+        new ClientboundEntityEffect(getEntityId(), effect, amplifier, duration, (byte) 0x00).send(ctx, protocolVersion, this);
     }
 
     public void addPotionEffect(String effect, int duration, int amplifier, byte flags) {
-        new ClientboundEntityEffect(1, effect, amplifier, duration, flags).send(ctx, protocolVersion, this);
+        new ClientboundEntityEffect(getEntityId(), effect, amplifier, duration, flags).send(ctx, protocolVersion, this);
     }
 
     public void removePotionEffect(String effect) {
-        new ClientboundRemoveEffect(1, effect).send(ctx, protocolVersion, this);
+        new ClientboundRemoveEffect(getEntityId(), effect).send(ctx, protocolVersion, this);
     }
 
     public void setCooldown(String material, int ticks) {
@@ -144,7 +144,6 @@ public class Player extends Entity {
     }
 
     public void teleport(double x, double y, double z) {
-        this.teleportImmunityTicks = 3;
         this.setX(x);
         this.setY(y);
         this.setZ(z);
@@ -155,20 +154,23 @@ public class Player extends Entity {
         new ClientboundSyncPlayerPos(0, x, y, z, 0, 0).send(ctx, protocolVersion, this);
     }
 
+    @Override
     public void teleport(Location location) {
-        this.teleportImmunityTicks = 3;
         this.setX(location.getX());
         this.setY(location.getY());
         this.setZ(location.getZ());
+        this.setYaw(location.getYaw());
+        this.setPitch(location.getPitch());
+
         if (protocolVersion < 99) {
-            new PlayerPositionAndLook13Packet(location.getX(), location.getY(), location.getY() + 1.62, location.getZ(), 0, 0, false).send(ctx, protocolVersion, this);
+            new PlayerPositionAndLook13Packet(location.getX(), location.getY(), location.getY() + 1.62, location.getZ(), location.getYaw(), location.getPitch(), false).send(ctx, protocolVersion, this);
             return;
         }
-        new ClientboundSyncPlayerPos(0, location.getX(), location.getY(), location.getZ(), 0, 0).send(ctx, protocolVersion, this);
+
+        new ClientboundSyncPlayerPos(0, location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()).send(ctx, protocolVersion, this);
     }
 
     public void teleport(double x, double y, double z, float yaw, float pitch) {
-        this.teleportImmunityTicks = 3;
         this.setX(x);
         this.setY(y);
         this.setZ(z);
@@ -181,28 +183,8 @@ public class Player extends Entity {
         new ClientboundSyncPlayerPos(0, x, y, z, yaw, pitch).send(ctx, protocolVersion, this);
     }
 
-    public void teleportBack(double x, double y, double z) {
-        this.teleportImmunityTicks = 3;
-        this.setX(x);
-        this.setY(y);
-        this.setZ(z);
-        if (protocolVersion < 99) {
-            new PlayerPositionAndLook13Packet(x, y, y + 1.62, z, 0, 0, false).send(ctx, protocolVersion, this);
-            return;
-        }
-        new ClientboundSyncPlayerPos(0, x, y, z, 0, 0).send(ctx, protocolVersion, this);
-    }
-
-    public void teleportBack(double x, double y, double z, float yaw, float pitch) {
-        this.teleportImmunityTicks = 3;
-        this.setX(x);
-        this.setY(y);
-        this.setZ(z);
-        if (protocolVersion < 99) {
-            new PlayerPositionAndLook13Packet(x, y, y + 1.62, z, yaw, pitch, false).send(ctx, protocolVersion, this);
-            return;
-        }
-        new ClientboundSyncPlayerPos(0, x, y, z, yaw, pitch).send(ctx, protocolVersion, this);
+    public void setRotation(float yaw, float pitch) {
+        teleport(this.x, this.y, this.z, yaw, pitch);
     }
 
     public void openInventory(CustomContainer inventory) {
@@ -296,10 +278,6 @@ public class Player extends Entity {
         new ClientboundSetHealth(health, food, saturation).send(ctx, protocolVersion, this);
     }
 
-    public void setLocalBlock(String block, int x, int y, int z) {
-        World.setLocalBlock(x, y, z, block, this);
-    }
-
     public void setLocalWorldTime(int time, boolean isTimeIncreasing) {
         if (protocolVersion < 99) {
             new TimeUpdate4Packet(time).send(ctx, protocolVersion, this);
@@ -321,14 +299,13 @@ public class Player extends Entity {
     }
 
     public void setLocalAttribute(String attribute, double value) {
-        new ClientboundUpdateAttributes(1, attribute, value).send(ctx, protocolVersion, this);
+        new ClientboundUpdateAttributes(getEntityId(), attribute, value).send(ctx, protocolVersion, this);
     }
 
 //    public void resetAttribute(String attribute) {
 //    }
 
     public void sendPluginMessage(String channel, ByteBuf buf) {
-        // "bungeecord:main", "Connect", "auth"
         new ClientboundPluginMessage(channel, buf).send(ctx, protocolVersion, this);
     }
 
@@ -354,19 +331,19 @@ public class Player extends Entity {
         this.opLevel = opLevel;
         switch (opLevel) {
             case 0:
-                new ClientboundEntityEvent(1, (byte) 24).send(ctx, protocolVersion, this);
+                new ClientboundEntityEvent(getEntityId(), (byte) 24).send(ctx, protocolVersion, this);
                 break;
             case 1:
-                new ClientboundEntityEvent(1, (byte) 25).send(ctx, protocolVersion, this);
+                new ClientboundEntityEvent(getEntityId(), (byte) 25).send(ctx, protocolVersion, this);
                 break;
             case 2:
-                new ClientboundEntityEvent(1, (byte) 26).send(ctx, protocolVersion, this);
+                new ClientboundEntityEvent(getEntityId(), (byte) 26).send(ctx, protocolVersion, this);
                 break;
             case 3:
-                new ClientboundEntityEvent(1, (byte) 27).send(ctx, protocolVersion, this);
+                new ClientboundEntityEvent(getEntityId(), (byte) 27).send(ctx, protocolVersion, this);
                 break;
             case 4:
-                new ClientboundEntityEvent(1, (byte) 28).send(ctx, protocolVersion, this);
+                new ClientboundEntityEvent(getEntityId(), (byte) 28).send(ctx, protocolVersion, this);
                 break;
         }
     }
@@ -457,6 +434,21 @@ public class Player extends Entity {
         new ClientboundContainerSetContent(0, stateId, getInventory().getSlots(), getInventory().getCarriedItem()).send(ctx, protocolVersion, this);
     }
 
+    public Location getEyeLocation() {
+        return getLocation().add(0, 1.62, 0);
+    }
+
+    public Vector3f getLookDirection() {
+        float yawRad = (float) Math.toRadians(this.getYaw());
+        float pitchRad = (float) Math.toRadians(this.getPitch());
+
+        float x = (float) (-Math.sin(yawRad) * Math.cos(pitchRad));
+        float y = (float) -Math.sin(pitchRad);
+        float z = (float) (Math.cos(yawRad) * Math.cos(pitchRad));
+
+        return new Vector3f(x, y, z);
+    }
+
     public ChannelHandlerContext getCtx() {
         return ctx;
     }
@@ -499,20 +491,6 @@ public class Player extends Entity {
 
     public void setLoaded(boolean loaded) {
         isLoaded = loaded;
-    }
-
-    public int getTeleportImmunityTicks() {
-        return teleportImmunityTicks;
-    }
-
-    public void setTeleportImmunityTicks(int ticks) {
-        this.teleportImmunityTicks = ticks;
-    }
-
-    public void decreaseImmunity() {
-        if (this.teleportImmunityTicks > 0) {
-            this.teleportImmunityTicks--;
-        }
     }
 
     public String getBrand() {

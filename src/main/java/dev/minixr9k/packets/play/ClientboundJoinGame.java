@@ -12,15 +12,17 @@ import static dev.minixr9k.utils.ProtocolUtils.writeVarInt;
 public class ClientboundJoinGame implements MinecraftPacket {
 
     private final GameMode gameMode;
+    private final Player player;
 
     public ClientboundJoinGame(GameMode gameMode, Player player) {
         this.gameMode = gameMode;
+        this.player = player;
         player.setSystemGameMode(gameMode);
     }
 
     @Override
     public void write(ByteBuf out, int protocolVersion) {
-        out.writeInt(1);         // Entity ID
+        out.writeInt(player.getEntityId());         // Entity ID
         out.writeBoolean(Configuration.get().hardcore); // Hardcore
 
         // Список миров

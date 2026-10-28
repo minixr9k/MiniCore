@@ -9,6 +9,11 @@ public class ItemStack {
     private final short count;
     private List<ItemComponent> components = new ArrayList<>();
 
+    public ItemStack(String type) {
+        this.type = type;
+        this.count = 1;
+    }
+
     public ItemStack(String type, short count) {
         this.type = type;
         this.count = count;

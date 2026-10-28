@@ -17,7 +17,7 @@ public class Block {
     }
 
     public void setType(String newType) {
-        World.placeBlock(location.getX(), location.getY(), location.getZ(), newType);
+        World.placeBlock(location.getBlockX(), location.getBlockY(), location.getBlockZ(), newType);
     }
 
     public Location getLocation() {

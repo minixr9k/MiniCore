@@ -126,9 +126,5 @@ public class PlayerChatHandler {
             World.saveWorld();
             World.broadcast("[ChunkHolder] Успешно сохранен!");
         }
-
-        if (command.equals("setblock")) {
-            World.setLocalBlock(-1, 5, 2, "minecraft:note_block[instrument=xylophone,note=5,powered=false]", player);
-        }
     }
 }

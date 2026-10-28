@@ -1,4 +1,4 @@
-package dev.minixr9k.types.textdisplay;
+package dev.minixr9k.types.display;
 
 import dev.minixr9k.features.World;
 import dev.minixr9k.packets.play.ClientboundSetEntityMetadata;
@@ -8,43 +8,22 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class TextDisplay extends Entity {
+public class TextDisplay extends Display {
 
     private List<String> text;
-    private Billboard billboard;
     private int lineWidth;
+    private int backgroundColor;
     private byte opacity;
     private boolean shadow;
     private boolean seeThrough;
-    private Vector4f rotation;
-    private Vector3f scale;
-
-    public enum Billboard {
-        FIXED((byte)0),
-        VERTICAL((byte)1),
-        HORIZONTAL((byte)2),
-        CENTER((byte)3);
-
-        private final byte id;
-
-        Billboard(byte id) {
-            this.id = id;
-        }
-
-        public byte getId() {
-            return id;
-        }
-    }
 
     public TextDisplay() {
         text = new ArrayList<>();
-        billboard = Billboard.FIXED;
         lineWidth = 200;
         opacity = -1;
+        backgroundColor = 1073741824;
         shadow = false;
         seeThrough = false;
-        rotation = new Vector4f(0, 0, 0, 1);
-        scale = new Vector3f(1, 1, 1);
     }
 
     public void setText(String text) {
@@ -52,24 +31,6 @@ public class TextDisplay extends Entity {
         for (Player p : World.getAllPlayers()) {
             ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(getEntityId());
             metadata.add(new MetadataEntry<>(23, Metadata.TEXT_COMPONENT, text));
-            p.sendPacket(metadata);
-        }
-    }
-
-    public void setRotation(Vector4f rotation) {
-        this.rotation = rotation;
-        for (Player p : World.getAllPlayers()) {
-            ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(getEntityId());
-            metadata.add(new MetadataEntry<>(13, Metadata.QUATERNION, rotation));
-            p.sendPacket(metadata);
-        }
-    }
-
-    public void setScale(Vector3f scale) {
-        this.scale = scale;
-        for (Player p : World.getAllPlayers()) {
-            ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(getEntityId());
-            metadata.add(new MetadataEntry<>(12, Metadata.VECTOR3F, scale));
             p.sendPacket(metadata);
         }
     }
@@ -92,15 +53,6 @@ public class TextDisplay extends Entity {
         }
     }
 
-    public void setBillboard(Billboard billboard) {
-        this.billboard = billboard;
-        for (Player p : World.getAllPlayers()) {
-            ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(getEntityId());
-            metadata.add(new MetadataEntry<>(15, Metadata.BYTE, billboard.getId()));
-            p.sendPacket(metadata);
-        }
-    }
-
     public void setShadowed(boolean shadow) {
         this.shadow = shadow;
         for (Player p : World.getAllPlayers()) {
@@ -119,9 +71,23 @@ public class TextDisplay extends Entity {
         }
     }
 
-    public void setBrightness() {
+    public void setBackgroundColor(int alpha, int red, int green, int blue) {
+        alpha = Math.max(0, Math.min(255, alpha));
+        red = Math.max(0, Math.min(255, red));
+        green = Math.max(0, Math.min(255, green));
+        blue = Math.max(0, Math.min(255, blue));
+
+        int argbColor = (alpha << 24) | (red << 16) | (green << 8) | blue;
+
+        setBackgroundColor(argbColor);
     }
 
-    public void setBackgroundColor() {
+    public void setBackgroundColor(int color) {
+        this.backgroundColor = color;
+        for (Player p : World.getAllPlayers()) {
+            ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(getEntityId());
+            metadata.add(new MetadataEntry<>(25, Metadata.VAR_INT, color));
+            p.sendPacket(metadata);
+        }
     }
 }

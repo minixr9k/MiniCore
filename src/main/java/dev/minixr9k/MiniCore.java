@@ -28,11 +28,13 @@ public class MiniCore {
     }
 
     public void start() {
-        World.initWorld(Configuration.get().world.chunks, Configuration.get().world.grassChunks);
-
         this.serverThread = new ServerThread();
         this.serverThread.start();
         logger.info("[Core/ServerThread] ServerThread запущен!");
+
+        PluginLoader.loadPlugins();
+
+        World.initWorld(Configuration.get().world.chunks, Configuration.get().world.grassChunks);
 
         this.networkServer = new NetworkServer(Configuration.get().port);
         this.networkServer.start();

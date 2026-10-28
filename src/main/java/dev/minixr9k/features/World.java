@@ -8,7 +8,9 @@ import dev.minixr9k.packets.beta.play.*;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.registries.BlockRegistry;
 import dev.minixr9k.types.*;
-import dev.minixr9k.types.textdisplay.TextDisplay;
+import dev.minixr9k.types.display.BlockDisplay;
+import dev.minixr9k.types.display.ItemDisplay;
+import dev.minixr9k.types.display.TextDisplay;
 
 import java.io.File;
 import java.io.IOException;
@@ -104,17 +106,11 @@ public class World {
 
             List<PlayerProfile> profile = SkinCache.get(player.getUuid());
             new ClientboundPlayerInfoUpdate(actions, player.getUuid(), player.getUsername(), profile).send(p.getCtx(), p.getProtocolVersion());
-            new ClientboundSpawnEntity(player.getEntityId(), player.getUuid(), "minecraft:player", 33, 107, 31, 0, 0, 0, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
-            if (p.getCtx() == player.getCtx()) {
-                ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(1);
-                metadata.add(new MetadataEntry<>(p.getProtocolVersion() <= 772 ? 17 : 16, Metadata.BYTE, (byte) 127));
-                metadata.send(p.getCtx(), p.getProtocolVersion(), p);
-            }
-            else {
-                ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(player.getEntityId());
-                metadata.add(new MetadataEntry<>(p.getProtocolVersion() <= 772 ? 17 : 16, Metadata.BYTE, (byte) 127));
-                metadata.send(p.getCtx(), p.getProtocolVersion(), p);
-            }
+            if (p.getEntityId() != player.getEntityId())
+                new ClientboundSpawnEntity(player.getEntityId(), player.getUuid(), "minecraft:player", 33, 107, 31, 0, 0, 0, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
+            ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(player.getEntityId());
+            metadata.add(new MetadataEntry<>(p.getProtocolVersion() <= 772 ? 17 : 16, Metadata.BYTE, (byte) 127));
+            metadata.send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -137,6 +133,10 @@ public class World {
         return players;
     }
 
+    public static List<Entity> getAllEntities() {
+        return entities;
+    }
+
     public static void spawnPlayers(Player player) {
         int actions = 0x01 | 0x04 | 0x08 | 0x10;
 
@@ -153,6 +153,8 @@ public class World {
             new ClientboundPlayerInfoUpdate(actions, p.getUuid(), p.getUsername(), profile).send(player.getCtx(), player.getProtocolVersion(), player);
             new ClientboundSpawnEntity(p.getEntityId(), p.getUuid(), "minecraft:player", p.getX(), p.getY(), p.getZ(), p.getYaw(), p.getPitch(), 0, 0, 0, 0, 0).send(player.getCtx(), player.getProtocolVersion(), player);
             ClientboundSetEntityMetadata metadata = new ClientboundSetEntityMetadata(p.getEntityId());
+            if (p.isInvisible())
+                metadata.add(new MetadataEntry<>(0, Metadata.BYTE, (byte)0x20)); // invisible
             metadata.add(new MetadataEntry<>(17, Metadata.BYTE, (byte)127));
             metadata.send(player.getCtx(), player.getProtocolVersion(), player);
             if (p.getInventory() != null) {
@@ -168,6 +170,7 @@ public class World {
     public static void spawnEntities(Player player) {
         for (Entity en : entities) {
             new ClientboundSpawnEntity(en.getEntityId(), en.getUuid(), en.getEntityType(), en.getX(), en.getY(), en.getZ(), en.getYaw(), en.getPitch(), en.getYaw(), 0, 0, 0, 0).send(player.getCtx(), player.getProtocolVersion(), player);
+            if (en.isInvisible()) en.setInvisible(true);
         }
     }
 
@@ -199,22 +202,25 @@ public class World {
         }
     }
 
-    public static void setPassenger(Player player, int entityId) {
+    public static void moveEntity(Entity entity, Player observer) {
+        byte yawAngle = (byte) (entity.getYaw() * 256.0F / 360.0F);
+        observer.sendPacket(new ClientboundEntityPositionSync(entity.getEntityId(), entity.getX(), entity.getY(), entity.getZ(), 0, 0, 0, entity.getYaw(), entity.getPitch(), true));
+        observer.sendPacket(new ClientboundSetHeadRotation(entity.getEntityId(), yawAngle));
+    }
+
+    public static void updatePassengers(Entity en) {
         for (Player p : players) {
-            if (p.getCtx() == player.getCtx()) continue;
-            if (p.getEntityId() == player.getPassengerOfEntity())
-                new ClientboundSetPassengers(1, entityId).send(p.getCtx(), p.getProtocolVersion(), p);
-            else
-                new ClientboundSetPassengers(player.getPassengerOfEntity(), entityId).send(p.getCtx(), p.getProtocolVersion(), p);
+            p.sendPacket(new ClientboundSetPassengers(en.getEntityId(), en.getPassengers()));
         }
+    }
+
+    public static void updatePassengers(Entity en, Player observer) {
+        observer.sendPacket(new ClientboundSetPassengers(en.getEntityId(), en.getPassengers()));
     }
 
     public static void updateAttribute(int entityId, String attribute, double value) {
         for (Player p : players) {
-            if (p.getEntityId() == entityId)
-                new ClientboundUpdateAttributes(1, attribute, value).send(p.getCtx(), p.getProtocolVersion(), p);
-            else
-                new ClientboundUpdateAttributes(entityId, attribute, value).send(p.getCtx(), p.getProtocolVersion(), p);
+            new ClientboundUpdateAttributes(entityId, attribute, value).send(p.getCtx(), p.getProtocolVersion(), p);
         }
     }
 
@@ -301,7 +307,6 @@ public class World {
         return 0;
     }
 
-
     public static void placeBlock(int x, int y, int z, String material) {
         int blockId = BlockRegistry.getBlock(material, 772);
         if (blockId == -1) return;
@@ -343,26 +348,21 @@ public class World {
         }
     }
 
-    public static void setLocalBlock(int x, int y, int z, String blockType, Player p) {
+    public static void setLocalBlock(String blockType, Location location, Player observer) {
         int blockId = BlockRegistry.getBlock(blockType, 772);
         if (blockId == -1) return;
-        System.out.println("id=" + blockId);
 
-        if (p.getProtocolVersion() < 99) {
-            new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
-            return;
-        }
-        new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
+        setLocalBlock(blockId, location, observer);
     }
 
-    public static void setLocalBlock(int x, int y, int z, int blockId, Player p) {
+    public static void setLocalBlock(int blockId, Location location, Player observer) {
         if (blockId == -1) return;
 
-        if (p.getProtocolVersion() < 99) {
-            new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
+        if (observer.getProtocolVersion() < 99) {
+            observer.sendPacket(new BlockChange53Packet(location.getBlockX(), location.getBlockY(), location.getBlockZ(), blockId));
             return;
         }
-        new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
+        observer.sendPacket(new ClientboundBlockUpdate(location.getBlockX(), location.getBlockY(), location.getBlockZ(), blockId));
     }
 
     public static void setEquipment(Player player) {
@@ -376,31 +376,19 @@ public class World {
         }
     }
 
-    public static Entity spawnEntity(Player player, String entityType) {
-        int entityId = World.globalEntityId.getAndIncrement();
-        UUID entityUUID = UUID.randomUUID();
-        Entity entity = new Entity();
-        entity.setEntityId(entityId);
-        entity.setEntityType(entityType);
-        entity.setUuid(entityUUID);
-        entity.setX(player.getX());
-        entity.setY(player.getY());
-        entity.setZ(player.getZ());
-        entity.setYaw(180);
-        entities.add(entity);
-        for (Player p : players) {
-            new ClientboundSpawnEntity(entityId, entityUUID, entityType, player.getX(), player.getY(), player.getZ(), 180, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
-        }
-        return entity;
-    }
-
-    public static Entity spawnEntity(String entityType, double x, double y, double z) {
+    public static Entity spawnEntity(String entityType, Location location) {
         int entityId = World.globalEntityId.getAndIncrement();
         UUID entityUUID = UUID.randomUUID();
         Entity entity;
         switch (entityType) {
             case "minecraft:text_display" -> {
                 entity = new TextDisplay();
+            }
+            case "minecraft:block_display" -> {
+                entity = new BlockDisplay();
+            }
+            case "minecraft:item_display" -> {
+                entity = new ItemDisplay();
             }
             default -> {
                 entity = new Entity();
@@ -409,32 +397,37 @@ public class World {
         entity.setEntityId(entityId);
         entity.setEntityType(entityType);
         entity.setUuid(entityUUID);
-        entity.setX(x);
-        entity.setY(y);
-        entity.setZ(z);
+        entity.setLocation(location);
         entities.add(entity);
         for (Player p : players) {
-            new ClientboundSpawnEntity(entityId, entityUUID, entityType, x, y, z, 0, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
+            new ClientboundSpawnEntity(entityId, entityUUID, entityType, location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch(), location.getYaw(), 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
         }
         return entity;
     }
 
-    public static Entity spawnEntity(String entityType, double x, double y, double z, float yaw, float pitch) {
+    public static Entity spawnEntity(String entityType, Location location, Player observer) {
         int entityId = World.globalEntityId.getAndIncrement();
         UUID entityUUID = UUID.randomUUID();
-        Entity entity = new Entity();
+        Entity entity;
+        switch (entityType) {
+            case "minecraft:text_display" -> {
+                entity = new TextDisplay();
+            }
+            case "minecraft:block_display" -> {
+                entity = new BlockDisplay();
+            }
+            case "minecraft:item_display" -> {
+                entity = new ItemDisplay();
+            }
+            default -> {
+                entity = new Entity();
+            }
+        }
         entity.setEntityId(entityId);
         entity.setEntityType(entityType);
         entity.setUuid(entityUUID);
-        entity.setX(x);
-        entity.setY(y);
-        entity.setZ(z);
-        entity.setYaw(yaw);
-        entity.setPitch(pitch);
-        entities.add(entity);
-        for (Player p : players) {
-            new ClientboundSpawnEntity(entityId, entityUUID, entityType, x, y, z, yaw, pitch, yaw, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
-        }
+        entity.setLocation(location);
+        observer.sendPacket(new ClientboundSpawnEntity(entityId, entityUUID, entityType, location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch(), location.getYaw(), 0, 0, 0, 0));
         return entity;
     }
 
@@ -485,22 +478,18 @@ public class World {
         }
     }
 
-    public static Entity spawnEntityDev(Player player, String entityType) {
-        int entityId = World.globalEntityId.getAndIncrement();
-        UUID entityUUID = UUID.randomUUID();
-        Entity entity = new Entity();
-        entity.setEntityId(entityId);
-        entity.setEntityType(entityType);
-        entity.setUuid(entityUUID);
-        entity.setX(player.getX());
-        entity.setY(player.getY());
-        entity.setZ(player.getZ());
-        entity.setYaw(180);
-        entities.add(entity);
-        for (Player p : players) {
-            new ClientboundSpawnEntity(entityId, entityUUID, entityType, player.getX(), player.getY(), player.getZ(), 180, 0, 180, 0, 0, 0, 0).send(p.getCtx(), p.getProtocolVersion(), p);
+    public static void playSound(String sound, float range, Location location, float volume, float pitch) {
+        for (Player player : getAllPlayers()) {
+            player.sendPacket(new ClientboundSound(sound, range, 0, location.getBlockX(), location.getBlockY(), location.getBlockZ(), volume, pitch, System.currentTimeMillis()));
         }
-        return entity;
+    }
+
+    public static void spawnParticle(String type, Location location, int count, float offsetX, float offsetY, float offsetZ, float speed) {
+        ClientboundParticle packet = new ClientboundParticle(type, false, false, location.getX(), location.getY(), location.getZ(), offsetX, offsetY, offsetZ, speed, count);
+
+        for (Player player : getAllPlayers()) {
+            player.sendPacket(packet);
+        }
     }
 
     public static void hidePlayer(Player player, Player observer) {
@@ -511,14 +500,14 @@ public class World {
 
     }
 
-    public static Player findNearablePlayer(double x, double y, double z) {
+    public static Player findNearablePlayer(Location location) {
         Player nearest = null;
         double nearestDistance = Double.MAX_VALUE;
 
         for (Player p : players) {
-            double dx = p.getX() - x;
-            double dy = p.getY() - y;
-            double dz = p.getZ() - z;
+            double dx = p.getX() - location.getX();
+            double dy = p.getY() - location.getY();
+            double dz = p.getZ() - location.getZ();
 
             double distanceSq =  dx * dx + dy * dy + dz * dz;
 
@@ -580,6 +569,8 @@ public class World {
 
     public static void removeEntity(int entityId) {
         Entity entity = getEntity(entityId);
+        if (entity == null) return;
+
         entities.remove(entity);
         for (Player p : players) {
             if (p.getProtocolVersion() < 99) {
@@ -600,6 +591,13 @@ public class World {
     public static Player getPlayer(int entityId) {
         return players.stream()
                 .filter(player -> player.getEntityId() == entityId)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static Player getPlayer(UUID uuid) {
+        return players.stream()
+                .filter(player -> player.getUuid() == uuid)
                 .findFirst()
                 .orElse(null);
     }

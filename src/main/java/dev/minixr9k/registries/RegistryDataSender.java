@@ -6,66 +6,6 @@ import java.nio.charset.StandardCharsets;
 
 public class RegistryDataSender {
 
-    public void sendWolfVariantAddAngry(ChannelHandlerContext ctx) {
-        ByteBuf pBuf = ctx.alloc().buffer();
-
-        try {
-            writeVarInt(pBuf, 0x07);
-            writeVarInt(pBuf, 22);
-            pBuf.writeBytes("minecraft:wolf_variant".getBytes(StandardCharsets.UTF_8));
-            writeVarInt(pBuf, 1);
-            writeVarInt(pBuf, 15);
-            pBuf.writeBytes("minecraft:ashen".getBytes(StandardCharsets.UTF_8));
-
-            ByteBuf nbtBuf = ctx.alloc().buffer();
-            try {
-                nbtBuf.writeByte(0x0A);
-
-                // id
-                nbtBuf.writeByte(0x03);
-                writeNBTString(nbtBuf, "id");
-                nbtBuf.writeInt(0);
-
-                // element
-                nbtBuf.writeByte(0x0A);
-                writeNBTString(nbtBuf, "element");
-
-                // assets
-                nbtBuf.writeByte(0x0A);
-                writeNBTString(nbtBuf, "assets");
-
-                // tame
-                nbtBuf.writeByte(0x08);
-                writeNBTString(nbtBuf, "tame");
-                writeNBTString(nbtBuf, "minecraft:entity/wolf/wolf_ashen_tame");
-
-                // angry - добавляем второе поле
-                nbtBuf.writeByte(0x08);
-                writeNBTString(nbtBuf, "wild");
-                writeNBTString(nbtBuf, "minecraft:entity/wolf/wolf_ashen");
-
-                nbtBuf.writeByte(0x00); // закрыть assets
-                nbtBuf.writeByte(0x00); // закрыть element
-                nbtBuf.writeByte(0x00); // закрыть корневой compound
-
-                writeVarInt(pBuf, nbtBuf.readableBytes());
-                pBuf.writeBytes(nbtBuf);
-
-            } finally {
-                nbtBuf.release();
-            }
-
-            sendPacket(ctx, pBuf);
-            System.out.println("Sent: id + element + assets with tame + angry");
-
-        } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
-            if (pBuf != null && pBuf.refCnt() > 0) {
-                pBuf.release();
-            }
-        }
-    }
-
     public void sendOverworldDimensionRegistry(ChannelHandlerContext ctx) {
         ByteBuf pBuf = ctx.alloc().buffer();
 

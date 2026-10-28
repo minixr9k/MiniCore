@@ -48,6 +48,8 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
+        player.setEntityId(World.globalEntityId.getAndIncrement());
+
         new ClientboundJoinGame(Configuration.get().gameMode, player).send(ctx, protocolVersion, player);
 
         sendChunks(player, protocolVersion, Configuration.get().world.chunks);
@@ -70,7 +72,6 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
                         List<PlayerProfile> skinData = Requests.getSkin(player.getUsername());
                         SkinCache.put(player.getUuid(), skinData);
                     }
-                    player.setEntityId(World.globalEntityId.getAndIncrement());
                     World.spawnPlayers(player);
                     World.addPlayer(player);
                     World.spawnEntities(player);
@@ -163,12 +164,20 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
         EventBus.getInstance().callEvent(new PlayerInputEvent(player, flags));
 
         if (isPressed(InputKey.KEY_SHIFT, flags)) {
-            player.setSneaking(true);
-            sneak(player, true);
+            PlayerSneakEvent event = new PlayerSneakEvent(player, true);
+            EventBus.getInstance().callEvent(event);
+            if (event.isCancelled()) return;
+
+            player.setSneaking(event.isSneaking());
+            sneak(player, event.isSneaking());
         }
         else {
-            player.setSneaking(false);
-            sneak(player, false);
+            PlayerSneakEvent event = new PlayerSneakEvent(player, false);
+            EventBus.getInstance().callEvent(event);
+            if (event.isCancelled()) return;
+
+            player.setSneaking(event.isSneaking());
+            sneak(player, event.isSneaking());
         }
     }
 

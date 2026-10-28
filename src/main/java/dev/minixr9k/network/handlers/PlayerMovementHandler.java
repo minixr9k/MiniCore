@@ -11,6 +11,8 @@ import dev.minixr9k.types.actions.MoveType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
+import java.util.List;
+
 public class PlayerMovementHandler {
 
     private final Player player;
@@ -120,8 +122,11 @@ public class PlayerMovementHandler {
                 entity.setX(entity.getPrevX());
                 entity.setY(entity.getPrevY());
                 entity.setZ(entity.getPrevZ());
-                new ClientboundSetPassengers(player.getPassengerOfEntity(), 0).send(ctx, player.getProtocolVersion(), player);
-                World.setPassenger(player, 0);
+//                new ClientboundSetPassengers(player.getPassengerOfEntity(), 0).send(ctx, player.getProtocolVersion(), player);
+//                World.setPassenger(player, 0);
+                Entity boat = World.getEntity(player.getPassengerOfEntity());
+                boat.removeAllPassengers();
+                World.updatePassengers(boat);
                 player.setPassengerOfEntity(0);
             }
 

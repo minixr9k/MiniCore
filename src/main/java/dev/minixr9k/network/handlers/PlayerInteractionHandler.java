@@ -87,6 +87,15 @@ public class PlayerInteractionHandler {
         int y = (int) ((location << 52) >> 52);
         int z = (int) ((location << 26) >> 38);
 
+        if (status >= 0 && status <= 2) {
+            PreBlockBreakEvent event = new PreBlockBreakEvent(player, World.getBlock(x, y, z), status, face, sequence);
+            EventBus.getInstance().callEvent(event);
+
+            if (event.isCancelled()) {
+                return;
+            }
+        }
+
         if ((status == 0 && player.getGameMode() == GameMode.CREATIVE)
                 || (status == 2 && player.getGameMode() == GameMode.SURVIVAL)) {
 

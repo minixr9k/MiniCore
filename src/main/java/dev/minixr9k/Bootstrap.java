@@ -7,7 +7,6 @@ public class Bootstrap {
 
     public static void main(String[] args) {
         Configuration.loadConfig();
-        PluginLoader.loadPlugins();
 
         MiniCore core = new MiniCore();
         core.start();
