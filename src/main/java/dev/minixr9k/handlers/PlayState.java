@@ -115,6 +115,7 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
             case 0x04 -> handleChangeGamemode(in);
             case 0x06 -> chatHandler.handleCommand(ctx, in);
             case 0x08 -> chatHandler.handleChat(ctx, in);
+            case 0x0B -> handleClientCommand(in);
             case 0x11 -> inventoryHandler.handleInventory(ctx, in);
             case 0x15 -> handlePlayerLoaded(ctx, in);
             case 0x1B -> keepAliveHandler.handleKeepAliveResponse(in);
@@ -150,11 +151,37 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
     private void handleChangeGamemode(ByteBuf in) {
         int gamemode = readVarInt(in);
         if (player.getOpLevel() < 2) return;
-        switch(gamemode) {
-            case 0 -> player.setGameMode(GameMode.SURVIVAL);
-            case 1 -> player.setGameMode(GameMode.CREATIVE);
-            case 2 -> player.setGameMode(GameMode.ADVENTURE);
-            case 3 -> player.setGameMode(GameMode.SPECTATOR);
+
+        GameMode newGameMode = null;
+        switch (gamemode) {
+            case 0 -> newGameMode = GameMode.SURVIVAL;
+            case 1 -> newGameMode = GameMode.CREATIVE;
+            case 2 -> newGameMode = GameMode.ADVENTURE;
+            case 3 -> newGameMode = GameMode.SPECTATOR;
+        }
+
+        if (newGameMode == null) return;
+
+        PlayerChangeGamemodeEvent event = new PlayerChangeGamemodeEvent(player, newGameMode);
+        EventBus.getInstance().callEvent(event);
+
+        if (event.isCancelled()) return;
+
+        player.setGameMode(newGameMode);
+    }
+
+    private void handleClientCommand(ByteBuf in) {
+        int actionId = readVarInt(in);
+        if (actionId < 0 || actionId > 1) return;
+        if (player.getHealth() > 0) return;
+
+        switch(actionId) {
+            case 0 -> {
+                EventBus.getInstance().callEvent(new PlayerRespawnEvent(player));
+            }
+            case 1 -> {
+                EventBus.getInstance().callEvent(new PlayerOpenStatsEvent(player));
+            }
         }
     }
 
@@ -222,9 +249,9 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
                 || (msg != null && (msg.contains("Connection reset") || msg.contains("Broken pipe")));
 
         if (isReset) {
-            MiniCore.getLogger().info("[In-game/Disconnect] " + username + " lost connection: Connection reset by peer\n");
+            MiniCore.getLogger().info("[In-game/Disconnect] " + username + " lost connection: Connection reset by peer");
         } else {
-            MiniCore.getLogger().info(String.format("[In-game] Exception in channel for %s: %s%n\n", username, msg));
+            MiniCore.getLogger().info(String.format("[In-game] Exception in channel for %s: %s%n", username, msg));
         }
 
         ctx.close();

@@ -58,6 +58,9 @@ public class MetadataEntry<T> {
                 // Компоненты на удаление (optional)
                 out.writeBoolean(false);
             }
+            case CAT_VARIANT, COW_VARIANT, WOLF_VARIANT, WOLF_SOUND_VARIANT, FROG_VARIANT, PIG_VARIANT, CHICKEN_VARIANT -> {
+                writeVarInt(out, (Integer) value);
+            }
             case POSE -> {
                 writeVarInt(out, (Integer) value);
             }

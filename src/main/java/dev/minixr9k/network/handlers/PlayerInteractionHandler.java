@@ -48,7 +48,6 @@ public class PlayerInteractionHandler {
         if (type == 1) {
             Player p = World.getPlayer(entityId);
             if (p != null && (p.getGameMode() == GameMode.ADVENTURE || p.getGameMode() == GameMode.SURVIVAL)) {
-                p.setHealth(p.getHealth() - 1);
                 new ClientboundDamageEvent(entityId, 34).send(ctx, player.getProtocolVersion(), player);
                 return;
             }

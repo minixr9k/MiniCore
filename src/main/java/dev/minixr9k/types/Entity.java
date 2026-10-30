@@ -31,7 +31,7 @@ public class Entity {
 
     private Inventory inventory;
 
-    private boolean lookingAtPlayer;
+    private int variant;
 
     public void addPassenger(Entity passenger) {
         passengers.add(passenger);
@@ -105,6 +105,51 @@ public class Entity {
 
     public void remove(Player observer) {
         observer.sendPacket(new ClientboundRemoveEntity(this.getEntityId()));
+    }
+
+    public int getVariant() {
+        return variant;
+    }
+
+    public void setVariant(int variant) {
+        this.variant = variant;
+
+        int metadataId = -1;
+        Metadata metadata = null;
+        switch (getEntityType()) {
+            case "minecraft:wolf" -> {
+                metadataId = 22;
+                metadata = Metadata.WOLF_VARIANT;
+            }
+            case "minecraft:cat" -> {
+                metadataId = 19;
+                metadata = Metadata.CAT_VARIANT;
+            }
+            case "minecraft:cow" -> {
+                metadataId = 17;
+                metadata = Metadata.COW_VARIANT;
+            }
+            case "minecraft:frog" -> {
+                metadataId = 17;
+                metadata = Metadata.FROG_VARIANT;
+            }
+            case "minecraft:pig" -> {
+                metadataId = 18;
+                metadata = Metadata.PIG_VARIANT;
+            }
+            case "minecraft:chicken" -> {
+                metadataId = 17;
+                metadata = Metadata.CHICKEN_VARIANT;
+            }
+        }
+        if (metadataId != -1) {
+            ClientboundSetEntityMetadata packet = new ClientboundSetEntityMetadata(getEntityId());
+            packet.add(new MetadataEntry<>(metadataId, metadata, variant));
+            for (Player p : World.getAllPlayers()) {
+                if (p.getProtocolVersion() < 99) continue;
+                packet.send(p.getCtx(), p.getProtocolVersion(), p);
+            }
+        }
     }
 
     public void updatePrevPosition() {

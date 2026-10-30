@@ -1,8 +1,13 @@
 package dev.minixr9k.registries;
 
+import dev.minixr9k.registries.data.MobVariant;
+import dev.minixr9k.registries.data.WolfVariant;
+import dev.minixr9k.utils.NbtUtils;
+import dev.minixr9k.utils.ProtocolUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 public class RegistryDataSender {
 
@@ -308,62 +313,88 @@ public class RegistryDataSender {
         }
     }
 
-    public void sendWolfVariants(ChannelHandlerContext ctx) {
+//    public void sendWolfVariants(ChannelHandlerContext ctx) {
+//        ByteBuf pBuf = ctx.alloc().buffer();
+//
+//        try {
+//            writeVarInt(pBuf, 0x07);
+//
+//            writeString(pBuf, "minecraft:wolf_variant");
+//
+//            String[] variants = {"ashen",
+//                                "black",
+//                                "chestnut",
+//                                "pale",
+//                                "rusty",
+//                                "snowy",
+//                                "spotted",
+//                                "striped",
+//                                "woods"};
+//
+//            writeVarInt(pBuf, variants.length);
+//
+//            for (String variant : variants) {
+//
+//                writeString(pBuf, "minecraft:" + variant);
+//                pBuf.writeBoolean(true);
+//
+//                ByteBuf nbtBuf = ctx.alloc().buffer();
+//                try {
+//                    NbtUtils.writeTagCompound(nbtBuf);
+//                    NbtUtils.writeTagCompound(nbtBuf);
+//                    ProtocolUtils.writeNBTString(nbtBuf, "assets");
+//
+//                    NbtUtils.writeString(nbtBuf, "tame", "minecraft:entity/wolf/" + "wolf_" + variant + "_tame");
+//                    NbtUtils.writeString(nbtBuf, "angry", "minecraft:entity/wolf/" + "wolf_" + variant + "_angry");
+//                    NbtUtils.writeString(nbtBuf, "wild", "minecraft:entity/wolf/" + "wolf_" + variant);
+//
+//                    NbtUtils.writeTagEnd(nbtBuf);
+//                    NbtUtils.writeTagEnd(nbtBuf);
+//
+//                    pBuf.writeBytes(nbtBuf);
+//
+//                } finally {
+//                    nbtBuf.release();
+//                }
+//            }
+//
+//            sendPacket(ctx, pBuf);
+//
+//        } finally {
+//            if (pBuf != null && pBuf.refCnt() > 0) {
+//                pBuf.release();
+//            }
+//        }
+//    }
+
+    public void sendWolfVariants(ChannelHandlerContext ctx, List<WolfVariant> variants) {
         ByteBuf pBuf = ctx.alloc().buffer();
 
         try {
-            // ID пакета (например, Registry Data)
             writeVarInt(pBuf, 0x07);
 
-            // Идентификатор реестра
             writeString(pBuf, "minecraft:wolf_variant");
 
-            String[] variants = {"ashen",
-                                "black",
-                                "chestnut",
-                                "pale",
-                                "rusty",
-                                "snowy",
-                                "spotted",
-                                "striped",
-                                "woods"};
+            writeVarInt(pBuf, variants.size());
 
-            // Записываем количество элементов в реестре (VarInt)
-            writeVarInt(pBuf, variants.length);
+            for (WolfVariant variant : variants) {
 
-            for (String variant : variants) {
-
-                // 1. Имя элемента (Identifier)
-                writeString(pBuf, "minecraft:" + variant);
-
-                // 2. Флаг "Has Data" (true = 1)
+                writeString(pBuf, "minecraft:" + variant.name());
                 pBuf.writeBoolean(true);
 
                 ByteBuf nbtBuf = ctx.alloc().buffer();
                 try {
-                    // Корневой Compound (В сетевом NBT имя ПУСТОЕ = short 0)
-                    nbtBuf.writeByte(10); // TAG_Compound
+                    NbtUtils.writeTagCompound(nbtBuf);
+                    NbtUtils.writeTagCompound(nbtBuf);
+                    ProtocolUtils.writeNBTString(nbtBuf, "assets");
 
-                    nbtBuf.writeByte(10);
-                    writeNBTString(nbtBuf, "assets");
+                    NbtUtils.writeString(nbtBuf, "tame", variant.tame());
+                    NbtUtils.writeString(nbtBuf, "angry", variant.angry());
+                    NbtUtils.writeString(nbtBuf, "wild", variant.wild());
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "tame");
-                    writeNBTString(nbtBuf, "minecraft:entity/wolf/" + "wolf_" + variant + "_tame");
+                    NbtUtils.writeTagEnd(nbtBuf);
+                    NbtUtils.writeTagEnd(nbtBuf);
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "angry");
-                    writeNBTString(nbtBuf, "minecraft:entity/wolf/" + "wolf_" + variant + "_angry");
-
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "wild");
-                    writeNBTString(nbtBuf, "minecraft:entity/wolf/" + "wolf_" + variant);
-
-//                // --- Закрываем структуру ---
-                    nbtBuf.writeByte(0);
-                    nbtBuf.writeByte(0); // закрыть корневой compound (TAG_End)
-
-                    // Записываем NBT-буфер в основной
                     pBuf.writeBytes(nbtBuf);
 
                 } finally {
@@ -372,10 +403,8 @@ public class RegistryDataSender {
             }
 
             sendPacket(ctx, pBuf);
-//            System.out.println("Sent " + variants.length + " wolf variants successfully.");
 
         } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
             if (pBuf != null && pBuf.refCnt() > 0) {
                 pBuf.release();
             }
@@ -386,33 +415,26 @@ public class RegistryDataSender {
         ByteBuf pBuf = ctx.alloc().buffer();
 
         try {
-            // ID пакета (например, Registry Data)
             writeVarInt(pBuf, 0x07);
 
-            // Идентификатор реестра
             writeString(pBuf, "minecraft:zombie_nautilus_variant");
 
             String[] variants = {
                     "minecraft:temperate",
                     "minecraft:warm"};
 
-            // Записываем количество элементов в реестре (VarInt)
             writeVarInt(pBuf, variants.length);
 
             for (String variant : variants) {
 
-                // 1. Имя элемента (Identifier)
                 writeString(pBuf, variant);
 
-                // 2. Флаг "Has Data" (true = 1)
                 pBuf.writeBoolean(false);
             }
 
             sendPacket(ctx, pBuf);
-//            System.out.println("Sent " + variants.length + " wolf variants successfully.");
 
         } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
             if (pBuf != null && pBuf.refCnt() > 0) {
                 pBuf.release();
             }
@@ -423,10 +445,8 @@ public class RegistryDataSender {
         ByteBuf pBuf = ctx.alloc().buffer();
 
         try {
-            // ID пакета (например, Registry Data)
             writeVarInt(pBuf, 0x07);
 
-            // Идентификатор реестра
             writeString(pBuf, "minecraft:timeline");
 
             String[] variants = {
@@ -435,90 +455,17 @@ public class RegistryDataSender {
                     "minecraft:moon",
                     "minecraft:villager_schedule"};
 
-            // Записываем количество элементов в реестре (VarInt)
             writeVarInt(pBuf, variants.length);
 
             for (String variant : variants) {
-
-                // 1. Имя элемента (Identifier)
                 writeString(pBuf, variant);
 
-                // 2. Флаг "Has Data" (true = 1)
                 pBuf.writeBoolean(false);
             }
 
             sendPacket(ctx, pBuf);
-//            System.out.println("Sent " + variants.length + " wolf variants successfully.");
 
         } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
-            if (pBuf != null && pBuf.refCnt() > 0) {
-                pBuf.release();
-            }
-        }
-    }
-
-    public void sendCatVariants(ChannelHandlerContext ctx) {
-        ByteBuf pBuf = ctx.alloc().buffer();
-
-        try {
-            // 1. ID пакета Registry Data (Configuration State)
-            writeVarInt(pBuf, 0x07);
-
-            // 2. Идентификатор реестра
-            writeString(pBuf, "minecraft:cat_variant");
-
-            // Список всех ванильных вариантов кошек для 1.21.8
-            String[] variants = {
-                    "all_black",
-                    "black",
-                    "british_shorthair",
-                    "calico",
-                    "jellie",
-                    "persian",
-                    "ragdoll",
-                    "red",
-                    "siamese",
-                    "tabby",
-                    "white"
-            };
-
-            // 3. Записываем количество элементов в реестре (Prefixed Array)
-            writeVarInt(pBuf, variants.length);
-
-            for (String variant : variants) {
-                // Имя элемента (Identifier)
-                writeString(pBuf, "minecraft:" + variant);
-
-                // Флаг "Has Data" (false = 0), данные подтянутся из minecraft:core
-                pBuf.writeBoolean(true);
-
-                ByteBuf nbtBuf = ctx.alloc().buffer();
-                try {
-                    // Корневой Compound (В сетевом NBT имя ПУСТОЕ = short 0)
-                    nbtBuf.writeByte(10); // TAG_Compound
-
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "asset_id");
-                    writeNBTString(nbtBuf, "minecraft:entity/cat/" + variant);
-
-//                // --- Закрываем структуру ---
-                    nbtBuf.writeByte(0); // закрыть корневой compound (TAG_End)
-
-                    // Записываем NBT-буфер в основной
-                    pBuf.writeBytes(nbtBuf);
-
-                } finally {
-                    nbtBuf.release();
-                }
-            }
-
-            // Передаем буфер в метод отправки, который сам сделает release()
-            sendPacket(ctx, pBuf);
-//            System.out.println("Sent " + variants.length + " cat variants successfully.");
-
-        } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
             if (pBuf != null && pBuf.refCnt() > 0) {
                 pBuf.release();
             }
@@ -528,13 +475,12 @@ public class RegistryDataSender {
     public void sendWolfSoundVariants(ChannelHandlerContext ctx) {
         ByteBuf pBuf = ctx.alloc().buffer();
         try {
-            writeVarInt(pBuf, 0x07); // Packet ID: registry_data
+            writeVarInt(pBuf, 0x07);
             writeString(pBuf, "minecraft:wolf_sound_variant");
 
             String[] variants = {
                     "angry",
                     "big",
-//                    "classic",
                     "cute",
                     "grumpy",
                     "puglin",
@@ -548,37 +494,22 @@ public class RegistryDataSender {
 
                 ByteBuf nbtBuf = ctx.alloc().buffer();
                 try {
-                    // Корневой Compound (В сетевом NBT имя ПУСТОЕ = short 0)
-                    nbtBuf.writeByte(10); // TAG_Compound
+                    NbtUtils.writeTagCompound(nbtBuf);
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "hurt_sound");
-                    writeNBTString(nbtBuf, "minecraft:entity.wolf_" + variant + ".hurt");
+                    NbtUtils.writeString(nbtBuf, "hurt_sound", "minecraft:entity.wolf_" + variant + ".hurt");
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "ambient_sound");
-                    writeNBTString(nbtBuf, "minecraft:entity.wolf_" + variant + ".ambient");
+                    NbtUtils.writeString(nbtBuf, "ambient_sound", "minecraft:entity.wolf_" + variant + ".ambient");
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "death_sound");
-                    writeNBTString(nbtBuf, "minecraft:entity.wolf_" + variant + ".death");
+                    NbtUtils.writeString(nbtBuf, "death_sound", "minecraft:entity.wolf_" + variant + ".death");
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "whine_sound");
-                    writeNBTString(nbtBuf, "minecraft:entity.wolf_" + variant + ".whine");
+                    NbtUtils.writeString(nbtBuf, "whine_sound", "minecraft:entity.wolf_" + variant + ".whine");
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "pant_sound");
-                    writeNBTString(nbtBuf, "minecraft:entity.wolf_" + variant + ".pant");
+                    NbtUtils.writeString(nbtBuf, "pant_sound", "minecraft:entity.wolf_" + variant + ".pant");
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "growl_sound");
-                    writeNBTString(nbtBuf, "minecraft:entity.wolf_" + variant + ".growl");
+                    NbtUtils.writeString(nbtBuf, "growl_sound", "minecraft:entity.wolf_" + variant + ".growl");
 
-//                // --- Закрываем структуру ---
-                    nbtBuf.writeByte(0); // закрыть корневой compound (TAG_End)
+                    NbtUtils.writeTagEnd(nbtBuf);
 
-                    // Записываем NBT-буфер в основной
                     pBuf.writeBytes(nbtBuf);
 
                 } finally {
@@ -587,183 +518,32 @@ public class RegistryDataSender {
             }
 
             sendPacket(ctx, pBuf);
-//            System.out.println("Sent " + variants.length + " wolf sound variants.");
         } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
             if (pBuf != null && pBuf.refCnt() > 0) {
                 pBuf.release();
             }
         }
     }
 
-    public void sendChickenVariants(ChannelHandlerContext ctx) {
+    public void sendMobVariant(ChannelHandlerContext ctx, String identifier, List<MobVariant> variants) {
         ByteBuf pBuf = ctx.alloc().buffer();
         try {
             writeVarInt(pBuf, 0x07);
-            writeString(pBuf, "minecraft:chicken_variant");
+            writeString(pBuf, identifier);
 
-            String[] variants = {
-                    "cold",
-                    "temperate",
-                    "warm"
-            };
-
-            writeVarInt(pBuf, variants.length);
-            for (String variant : variants) {
-                writeString(pBuf, "minecraft:" + variant);
-                pBuf.writeBoolean(true); // есть данные
-
-                ByteBuf nbtBuf = ctx.alloc().buffer();
-                try {
-                    // Корневой Compound (В сетевом NBT имя ПУСТОЕ = short 0)
-                    nbtBuf.writeByte(10); // TAG_Compound
-
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "asset_id");
-                    writeNBTString(nbtBuf, "minecraft:entity/chicken/" + variant + "_chicken");
-
-//                // --- Закрываем структуру ---
-                    nbtBuf.writeByte(0); // закрыть корневой compound (TAG_End)
-
-                    // Записываем NBT-буфер в основной
-                    pBuf.writeBytes(nbtBuf);
-
-                } finally {
-                    nbtBuf.release();
-                }
-            }
-
-            sendPacket(ctx, pBuf);
-//            System.out.println("Sent " + variants.length + " chicken variants.");
-        } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
-            if (pBuf != null && pBuf.refCnt() > 0) {
-                pBuf.release();
-            }
-        }
-    }
-
-    public void sendCowVariants(ChannelHandlerContext ctx) {
-        ByteBuf pBuf = ctx.alloc().buffer();
-        try {
-            writeVarInt(pBuf, 0x07);
-            writeString(pBuf, "minecraft:cow_variant");
-
-            String[] variants = {
-                    "cold",
-                    "temperate",
-                    "warm"
-            };
-
-            writeVarInt(pBuf, variants.length);
-            for (String variant : variants) {
-                writeString(pBuf, "minecraft:" + variant);
+            writeVarInt(pBuf, variants.size());
+            for (MobVariant variant : variants) {
+                writeString(pBuf, "minecraft:" + variant.name());
                 pBuf.writeBoolean(true);
 
                 ByteBuf nbtBuf = ctx.alloc().buffer();
                 try {
-                    // Корневой Compound (В сетевом NBT имя ПУСТОЕ = short 0)
-                    nbtBuf.writeByte(10); // TAG_Compound
+                    NbtUtils.writeTagCompound(nbtBuf);
 
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "asset_id");
-                    writeNBTString(nbtBuf, "minecraft:entity/cow/" + variant + "_cow");
+                    NbtUtils.writeString(nbtBuf, "asset_id", variant.texture());
 
-                    nbtBuf.writeByte(0); // закрыть корневой compound (TAG_End)
+                    NbtUtils.writeTagEnd(nbtBuf);
 
-                    // Записываем NBT-буфер в основной
-                    pBuf.writeBytes(nbtBuf);
-
-                } finally {
-                    nbtBuf.release();
-                }
-            }
-
-            sendPacket(ctx, pBuf);
-//            System.out.println("Sent " + variants.length + " cow variants.");
-        } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
-            if (pBuf != null && pBuf.refCnt() > 0) {
-                pBuf.release();
-            }
-        }
-    }
-
-    public void sendFrogVariants(ChannelHandlerContext ctx) {
-        ByteBuf pBuf = ctx.alloc().buffer();
-        try {
-            writeVarInt(pBuf, 0x07); // Packet ID: registry_data
-            writeString(pBuf, "minecraft:frog_variant");
-
-            String[] variants = {
-                    "cold",
-                    "temperate",
-                    "warm"
-            };
-
-            writeVarInt(pBuf, variants.length);
-            for (String variant : variants) {
-                writeString(pBuf, "minecraft:" + variant);
-                pBuf.writeBoolean(true);
-
-                ByteBuf nbtBuf = ctx.alloc().buffer();
-                try {
-                    // Корневой Compound (В сетевом NBT имя ПУСТОЕ = short 0)
-                    nbtBuf.writeByte(10); // TAG_Compound
-
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "asset_id");
-                    writeNBTString(nbtBuf, "minecraft:entity/frog/" + variant + "_frog");
-
-                    nbtBuf.writeByte(0); // закрыть корневой compound (TAG_End)
-
-                    // Записываем NBT-буфер в основной
-                    pBuf.writeBytes(nbtBuf);
-
-                } finally {
-                    nbtBuf.release();
-                }
-            }
-
-            sendPacket(ctx, pBuf);
-//            System.out.println("Sent " + variants.length + " frog variants.");
-        } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
-            if (pBuf != null && pBuf.refCnt() > 0) {
-                pBuf.release();
-            }
-        }
-    }
-
-    public void sendPigVariants(ChannelHandlerContext ctx) {
-        ByteBuf pBuf = ctx.alloc().buffer();
-        try {
-            writeVarInt(pBuf, 0x07);
-            writeString(pBuf, "minecraft:pig_variant");
-
-            String[] variants = {
-                    "cold",
-                    "temperate",
-                    "warm"
-            };
-
-            writeVarInt(pBuf, variants.length);
-            for (String variant : variants) {
-                writeString(pBuf, "minecraft:" + variant);
-                pBuf.writeBoolean(true);
-
-                ByteBuf nbtBuf = ctx.alloc().buffer();
-                try {
-                    // Корневой Compound (В сетевом NBT имя ПУСТОЕ = short 0)
-                    nbtBuf.writeByte(10); // TAG_Compound
-
-                    nbtBuf.writeByte(8);
-                    writeNBTString(nbtBuf, "asset_id");
-                    writeNBTString(nbtBuf, "minecraft:entity/pig/" + variant + "_pig");
-
-                    nbtBuf.writeByte(0); // закрыть корневой compound (TAG_End)
-
-                    // Записываем NBT-буфер в основной
                     pBuf.writeBytes(nbtBuf);
 
                 } finally {
@@ -773,7 +553,6 @@ public class RegistryDataSender {
 
             sendPacket(ctx, pBuf);
         } finally {
-            // Буфер гарантированно удалится и при успехе, и при ошибке
             if (pBuf != null && pBuf.refCnt() > 0) {
                 pBuf.release();
             }

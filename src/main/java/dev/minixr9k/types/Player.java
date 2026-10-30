@@ -1,5 +1,7 @@
 package dev.minixr9k.types;
 
+import dev.minixr9k.api.EventBus;
+import dev.minixr9k.api.event.PlayerDeathEvent;
 import dev.minixr9k.auth.PlayerProfile;
 import dev.minixr9k.features.World;
 import dev.minixr9k.packets.beta.play.ChatMessage3Packet;
@@ -223,15 +225,6 @@ public class Player extends Entity {
         }
     }
 
-    @Deprecated(forRemoval = true)
-    public void setGamemode(GameMode gamemode) {
-        this.gameMode = gamemode;
-
-        setAllowFlight(gamemode == GameMode.CREATIVE || gamemode == GameMode.SPECTATOR);
-
-        new ClientboundGameEvent(3, gamemode.getId()).send(ctx, protocolVersion, this);
-    }
-
     public void setGameMode(GameMode gamemode) {
         this.gameMode = gamemode;
         hudMode = HudMode.SHOW;
@@ -260,11 +253,39 @@ public class Player extends Entity {
 
     public void setHealth(int health) {
         if (health <= 0) {
-            this.health = 20;
-            new ClientboundSetHealth(20, food, saturation).send(ctx, protocolVersion, this);
-            return;
+            PlayerDeathEvent event = new PlayerDeathEvent(this);
+            EventBus.getInstance().callEvent(event);
+
+            if (event.isCancelled()) {
+                this.health = 1;
+                updateHealth();
+                return;
+            }
         }
+
         this.health = health;
+        updateHealth();
+    }
+
+    public void damage(int damage) {
+        if (this.health <= 0) return;
+
+        if (this.health - damage <= 0) {
+            PlayerDeathEvent event = new PlayerDeathEvent(this);
+            EventBus.getInstance().callEvent(event);
+
+            if (event.isCancelled()) {
+                this.health = 1;
+                updateHealth();
+                return;
+            }
+        }
+
+        this.health -= damage;
+        updateHealth();
+    }
+
+    private void updateHealth() {
         new ClientboundSetHealth(health, food, saturation).send(ctx, protocolVersion, this);
     }
 

@@ -176,7 +176,7 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
         if (isReset) {
             MiniCore.getLogger().info("[Login/Disconnect] " + username + " lost connection: Connection reset by peer");
         } else {
-            MiniCore.getLogger().info(String.format("[Login] Exception in channel for %s: %s%n\n", username, msg));
+            MiniCore.getLogger().info(String.format("[Login] Exception in channel for %s: %s%n", username, msg));
             cause.printStackTrace();
         }
 
