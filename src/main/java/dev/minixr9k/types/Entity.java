@@ -4,6 +4,7 @@ import dev.minixr9k.features.World;
 import dev.minixr9k.packets.play.ClientboundRemoveEntity;
 import dev.minixr9k.packets.play.ClientboundSetEntityMetadata;
 import dev.minixr9k.packets.play.ClientboundSetEntityVelocity;
+import dev.minixr9k.types.metadata.Pose;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ public class Entity {
 
     private Inventory inventory;
 
+    protected Pose pose;
     private int variant;
 
     public void addPassenger(Entity passenger) {
@@ -297,6 +299,20 @@ public class Entity {
 
     public void setSneaking(boolean sneaking) {
         isSneaking = sneaking;
+
+        ClientboundSetEntityMetadata packet = new ClientboundSetEntityMetadata(getEntityId());
+        if (isSneaking) {
+            packet.add(new MetadataEntry<>(0, Metadata.BYTE, (byte) 0x02));
+        }
+        else {
+            packet.add(new MetadataEntry<>(0, Metadata.BYTE, (byte) 0x00));
+        }
+
+        for (Player p : World.getAllPlayers()) {
+            if (p.getEntityId() == getEntityId()) continue;
+            if (p.getProtocolVersion() < 99) continue;
+            packet.send(p.getCtx(), p.getProtocolVersion(), p);
+        }
     }
 
     public boolean isInvisible() {
@@ -332,6 +348,21 @@ public class Entity {
         }
 
         observer.sendPacket(packet);
+    }
+
+    public Pose getPose() {
+        return pose;
+    }
+
+    public void setPose(Pose pose) {
+        this.pose = pose;
+
+        ClientboundSetEntityMetadata packet = new ClientboundSetEntityMetadata(getEntityId());
+        packet.add(new MetadataEntry<>(6, Metadata.POSE, pose.getId()));
+
+        for (Player p : World.getAllPlayers()) {
+            packet.send(p.getCtx(), p.getProtocolVersion(), p);
+        }
     }
 
     public boolean isOnFire() {

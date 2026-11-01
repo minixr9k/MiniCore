@@ -8,6 +8,7 @@ import dev.minixr9k.packets.play.ClientboundSetPassengers;
 import dev.minixr9k.types.Entity;
 import dev.minixr9k.types.Player;
 import dev.minixr9k.types.actions.MoveType;
+import dev.minixr9k.types.metadata.Pose;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 

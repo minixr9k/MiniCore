@@ -236,9 +236,9 @@ public class World {
         }
     }
 
-    public static void sneak(Player player, boolean isSneaking) {
+    public static void sneak(Player player) {
         ClientboundSetEntityMetadata packet = new ClientboundSetEntityMetadata(player.getEntityId());
-        if (isSneaking) {
+        if (player.isSneaking()) {
             packet.add(new MetadataEntry<>(0, Metadata.BYTE, (byte) 0x02));
             packet.add(new MetadataEntry<>(6, Metadata.POSE, 5)); // sneaking
         }
@@ -294,6 +294,18 @@ public class World {
             return new Block(BlockRegistry.getBlockName(blockId, 772), new Location(x, y, z));
         }
         return new Block("minecraft:air", new Location(x, y, z));
+    }
+
+    public static Block getBlock(Location location) {
+        int chunkX = location.getBlockX() >> 4;
+        int chunkZ = location.getBlockZ() >> 4;
+
+        Chunk chunk = getChunkAt(chunkX, chunkZ);
+        if (chunk != null) {
+            int blockId = chunk.getBlockAt(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+            return new Block(BlockRegistry.getBlockName(blockId, 772), new Location(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+        }
+        return new Block("minecraft:air", new Location(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
     }
 
     public static int getBlockId(int x, int y, int z) {

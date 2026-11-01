@@ -3,6 +3,7 @@ package dev.minixr9k.handlers;
 import dev.minixr9k.MiniCore;
 import dev.minixr9k.api.EventBus;
 import dev.minixr9k.api.event.PacketReceiveEvent;
+import dev.minixr9k.api.event.PlayerConfigurationEvent;
 import dev.minixr9k.api.event.RegistriesSendEvent;
 import dev.minixr9k.config.Configuration;
 import dev.minixr9k.packets.confAndPlay.serverbound.ServerboundPluginMessage;
@@ -91,6 +92,12 @@ public class ConfigurationState extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
+        PlayerConfigurationEvent configurationEvent = new PlayerConfigurationEvent(player);
+        EventBus.getInstance().callEvent(configurationEvent);
+        if (configurationEvent.isCancelled()) {
+            return;
+        }
+
         if (protocolVersion <= 772)
             new ClientboundKnownPacks("minecraft", "core", "1.21.8").send(ctx, 1, player);
         else if (protocolVersion == 773)

@@ -64,6 +64,11 @@ public class PlayerInteractionHandler {
         int y = (int) ((location << 52) >> 52);
         int z = (int) ((location << 26) >> 38);
 
+        PlayerMiddleClickEvent event = new PlayerMiddleClickEvent(player, x, y, z, includeData);
+        EventBus.getInstance().callEvent(event);
+
+        if (event.isCancelled()) return;
+
         if (player.getGameMode() != GameMode.CREATIVE) return;
 
         String type = World.getBlockType(x, y, z);
@@ -111,11 +116,17 @@ public class PlayerInteractionHandler {
             new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion(), player);
         }
         else if (status == 3) {
-            EventBus.getInstance().callEvent(new PlayerInputEvent(player, InputKey.KEY_CTRL_Q));
+            PlayerInputEvent event = new PlayerInputEvent(player, InputKey.KEY_CTRL_Q);
+            EventBus.getInstance().callEvent(event);
+            if (event.isCancelled()) return;
+
             player.updateInventory(0);
         }
         else if (status == 4) {
-            EventBus.getInstance().callEvent(new PlayerInputEvent(player, InputKey.KEY_Q));
+            PlayerInputEvent event = new PlayerInputEvent(player, InputKey.KEY_Q);
+            EventBus.getInstance().callEvent(event);
+            if (event.isCancelled()) return;
+
             player.updateInventory(0);
         }
         else if (status == 6) {
@@ -203,7 +214,9 @@ public class PlayerInteractionHandler {
             case 5 -> x++; // Кликнули по восточной грани -> блок к востоку (+X)
         }
 
-        if (x == Math.floor(player.getX()) && z == Math.floor(player.getZ()) && (y == Math.floor(player.getY()) || y == Math.floor(player.getY() + 1))) return;
+        if (x == player.getLocation().getBlockX() && z == player.getLocation().getBlockZ() && y == player.getLocation().getBlockY()) return;
+        if (x == player.getLocation().getBlockX() && z == player.getLocation().getBlockZ() && y == (player.getLocation().getBlockY() + 1)) return;
+
         if (player.getGameMode() == GameMode.ADVENTURE || player.getGameMode() == GameMode.SPECTATOR) return;
         if (player.getInventory().getItemInMainHand() == null) return;
 
@@ -222,6 +235,13 @@ public class PlayerInteractionHandler {
 
         placeBlock(x, y, z, blockId);
         new ClientboundAckBlockChange(sequence).send(ctx, player.getProtocolVersion(), player);
+
+        Block placedBlock = new Block(BlockRegistry.getBlockName(blockId, 772), new Location(x, y, z));
+
+        BlockPostPlaceEvent postPlaceEvent = new BlockPostPlaceEvent(player, placedBlock);
+        EventBus.getInstance().callEvent(postPlaceEvent);
+
+        if (postPlaceEvent.isCancelled()) return;
 
         if (player.getGameMode() != GameMode.SURVIVAL) return;
         ItemStack item = player.getInventory().getItemInMainHand();

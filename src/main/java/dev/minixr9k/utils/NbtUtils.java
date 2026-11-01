@@ -61,4 +61,9 @@ public class NbtUtils {
         buf.writeByte(10);
     }
 
+    public static void writeTagCompound(ByteBuf buf, String identifier) {
+        buf.writeByte(10);
+        writeNBTString(buf, identifier);
+    }
+
 }

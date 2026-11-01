@@ -1,14 +1,16 @@
 package dev.minixr9k.api.event;
 
+import dev.minixr9k.api.Cancellable;
 import dev.minixr9k.api.Event;
 import dev.minixr9k.types.InputKey;
 import dev.minixr9k.types.Player;
 
-public class PlayerInputEvent extends Event {
+public class PlayerInputEvent extends Event implements Cancellable {
 
     private final Player player;
     private final byte flags;
     private final InputKey customKey;
+    private boolean cancelled;
 
     public PlayerInputEvent(Player player, byte flags) {
         this.player = player;
@@ -24,6 +26,16 @@ public class PlayerInputEvent extends Event {
 
     public Player getPlayer() { return player; }
     public int getFlags() { return flags; }
+
+    @Override
+    public void setCancelled(boolean cancel) {
+        this.cancelled = cancel;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return cancelled;
+    }
 
     public boolean isPressed(InputKey key) {
 
@@ -42,5 +54,4 @@ public class PlayerInputEvent extends Event {
             default        -> false;
         };
     }
-
 }

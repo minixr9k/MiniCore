@@ -1,5 +1,7 @@
 package dev.minixr9k.api;
 
+import dev.minixr9k.MiniCore;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,8 +12,6 @@ public class EventBus {
 
     private static final EventBus INSTANCE = new EventBus();
 
-    // Ключ - КЛАСС события (например, PlayerMoveEvent.class)
-    // Значение - Список всех зарегистрированных методов плагинов, отсортированных по приоритету
     private final ConcurrentHashMap<Class<? extends Event>, List<RegisteredListener>> registeredEvents;
 
     private EventBus() {
@@ -22,8 +22,6 @@ public class EventBus {
         return EventBus.INSTANCE;
     }
 
-    // Плагин вызывает этот метод, передавая свой класс-слушатель:
-    // EventBus.getInstance().registerListener(new MyMovementListener());
     public void registerListener(EventListener listener) {
         // Берем класс переданного листенера и перебираем все его методы
         Method[] methods = listener.getClass().getDeclaredMethods();
@@ -36,7 +34,7 @@ public class EventBus {
 
             // Проверяем, что у метода ровно 1 аргумент
             if (method.getParameterCount() != 1) {
-                System.err.println("Ошибка: Метод " + method.getName() + " имеет @CatchEvent, но параметров не 1!");
+                MiniCore.getLogger().error("Ошибка: Метод " + method.getName() + " имеет @CatchEvent, но параметров не 1!");
                 continue;
             }
 
@@ -45,7 +43,7 @@ public class EventBus {
 
             // Проверяем, является ли этот параметр наследником нашего класса Event
             if (!Event.class.isAssignableFrom(paramType)) {
-                System.err.println("Ошибка: Параметр метода " + method.getName() + " не является наследником Event!");
+                MiniCore.getLogger().error("Ошибка: Параметр метода " + method.getName() + " не является наследником Event!");
                 continue;
             }
 
@@ -67,9 +65,7 @@ public class EventBus {
             Collections.sort(registeredEvents.get(eventClass));
         }
     }
-
-    // Твое ядро (Netty хендлер) вызывает этот метод:
-    // EventBus.getInstance().callEvent(new PlayerMoveEvent(player, x, y, z));
+    
     public void callEvent(Event event) {
         // Ищем список слушателей именно для класса этого объекта
         List<RegisteredListener> listeners = registeredEvents.get(event.getClass());
@@ -83,8 +79,7 @@ public class EventBus {
             try {
                 listener.execute(event);
             } catch (Exception e) {
-                System.err.println("Произошла ошибка в плагине при обработке события " + event.getClass().getSimpleName());
-                e.printStackTrace(); // Чтобы ошибка в плагине не крашила всё сетевое ядро
+                MiniCore.getLogger().error("Произошла ошибка в плагине при обработке события " + event.getClass().getSimpleName() + " " + e);
             }
         }
     }

@@ -12,6 +12,7 @@ import dev.minixr9k.packets.confAndPlay.ClientboundDisconnect;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.types.dialog.Dialog;
 import dev.minixr9k.types.hud.HudMode;
+import dev.minixr9k.types.metadata.Pose;
 import dev.minixr9k.utils.BetaPacket;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
@@ -29,8 +30,9 @@ public class Player extends Entity {
     private boolean isFlying;
     private boolean isLoaded;
     private int opLevel;
-    private boolean isSprinting;
-    private boolean isGliding;
+    private boolean sprinting;
+    private boolean gliding;
+    private boolean crawl;
 
     private int health = 20;
     private int food = 20;
@@ -455,6 +457,19 @@ public class Player extends Entity {
         new ClientboundContainerSetContent(0, stateId, getInventory().getSlots(), getInventory().getCarriedItem()).send(ctx, protocolVersion, this);
     }
 
+    @Override
+    public void setPose(Pose pose) {
+        this.pose = pose;
+
+        ClientboundSetEntityMetadata packet = new ClientboundSetEntityMetadata(getEntityId());
+        packet.add(new MetadataEntry<>(6, Metadata.POSE, pose.getId()));
+
+        for (Player p : World.getAllPlayers()) {
+            if (p.getEntityId() == getEntityId()) continue;
+            packet.send(p.getCtx(), p.getProtocolVersion(), p);
+        }
+    }
+
     public Location getEyeLocation() {
         return getLocation().add(0, 1.62, 0);
     }
@@ -523,19 +538,31 @@ public class Player extends Entity {
     }
 
     public boolean isSprinting() {
-        return isSprinting;
+        return sprinting;
     }
 
     public void setSprinting(boolean sprinting) {
-        isSprinting = sprinting;
+        this.sprinting = sprinting;
     }
 
     public boolean isGliding() {
-        return isGliding;
+        return gliding;
     }
 
     public void setGliding(boolean gliding) {
-        isGliding = gliding;
+        this.gliding = gliding;
+    }
+
+    public boolean isCrawl() {
+        return crawl;
+    }
+
+    public void setCrawl(boolean crawl) {
+        this.crawl = crawl;
+    }
+
+    public HudMode getHudMode() {
+        return hudMode;
     }
 
     public int getPing() {

@@ -87,7 +87,7 @@ public class ProtocolUtils {
         out.writeLong(uuid.getLeastSignificantBits());
     }
 
-    public static void writeTextComponent(ByteBuf buf, String message){
+    public static void writeTextComponent(ByteBuf buf, String message) {
         try {
             if (JsonParser.parseString(message).isJsonArray()) {
                 writeColoredTextComponent(buf, message);

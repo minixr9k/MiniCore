@@ -12,6 +12,7 @@ import dev.minixr9k.packets.confAndPlay.ClientboundResourcepackPush;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.types.*;
 import dev.minixr9k.types.dialog.*;
+import dev.minixr9k.types.metadata.Pose;
 import dev.minixr9k.utils.Requests;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -48,6 +49,12 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
+        PlayerPreJoinEvent preJoinEvent = new PlayerPreJoinEvent(player);
+        EventBus.getInstance().callEvent(preJoinEvent);
+        if (preJoinEvent.isCancelled()) {
+            return;
+        }
+
         player.setEntityId(World.globalEntityId.getAndIncrement());
 
         new ClientboundJoinGame(Configuration.get().gameMode, player).send(ctx, protocolVersion, player);
@@ -195,16 +202,18 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
             EventBus.getInstance().callEvent(event);
             if (event.isCancelled()) return;
 
-            player.setSneaking(event.isSneaking());
-            sneak(player, event.isSneaking());
+            player.setSneaking(true);
+            if (!player.isCrawl())
+                player.setPose(Pose.SNEAKING);
         }
         else {
             PlayerSneakEvent event = new PlayerSneakEvent(player, false);
             EventBus.getInstance().callEvent(event);
             if (event.isCancelled()) return;
 
-            player.setSneaking(event.isSneaking());
-            sneak(player, event.isSneaking());
+            player.setSneaking(false);
+            if (!player.isCrawl())
+                player.setPose(Pose.STANDING);
         }
     }
 
