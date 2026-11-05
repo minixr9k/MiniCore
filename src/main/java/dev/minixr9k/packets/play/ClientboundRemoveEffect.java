@@ -31,6 +31,8 @@ public class ClientboundRemoveEffect implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x4C;
         return 0x47;
     }
 }

@@ -88,8 +88,7 @@ public class PlayState extends SimpleChannelInboundHandler<ByteBuf> {
 
                     keepAliveHandler.startKeepAliveLoop(ctx);
 
-                    if (protocolVersion <= 773)
-                        player.setLocalWorldTime(Configuration.get().time, Configuration.get().isTimeIncreasing);
+                    player.setLocalWorldTime(Configuration.get().time, Configuration.get().isTimeIncreasing);
                     player.teleport(Configuration.get().spawnPosition);
 
                     int opLevel = Configuration.get().operators.getOrDefault(player.getUsername(), 0);

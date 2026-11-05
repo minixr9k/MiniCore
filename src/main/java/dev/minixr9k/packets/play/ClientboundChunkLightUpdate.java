@@ -1,5 +1,7 @@
 package dev.minixr9k.packets.play;
 
+import dev.minixr9k.chunk.Chunk;
+import dev.minixr9k.features.World;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 import java.util.Arrays;
@@ -20,57 +22,63 @@ public class ClientboundChunkLightUpdate implements MinecraftPacket {
         writeVarInt(out, chunkX);
         writeVarInt(out, chunkZ);
 
-        // Всего в нашем мире 32 секции. Маска должна покрывать 32 + 2 = 34 секции.
-        // Индекс 0 — это секция под миром (Y = -5). Индексы 1..32 — игровые секции. Индекс 33 — над миром.
+        Chunk chunk = World.getChunkAt(chunkX, chunkZ);
+        byte[][] blockLightSections = (chunk != null) ? chunk.getBlockLightSections() : new byte[24][];
 
-        // Создаем маски
         long skyLightMask = 0;
         long blockLightMask = 0;
         long emptySkyLightMask = 0;
         long emptyBlockLightMask = 0;
 
-        // Включаем Sky Light (солнечный свет) для ВСЕХ 34 секций, чтобы весь мир был освещен сверху
+        // Включаем Sky Light для всех 34 секций
         for (int i = 0; i < 34; i++) {
             skyLightMask |= (1L << i);
         }
 
-        // Оптимизация: вместо отправки массивов Block Light, помечаем все 34 секции как "пустые по свету блоков"
-        // Клиент занулит свет от факелов сам, а мы сэкономим кучу трафика!
+        // Проверяем, какие секции содержат Block Light (индексы с 1 по 24 соответствуют массиву)
+        int blockLightArraysCount = 0;
         for (int i = 0; i < 34; i++) {
-            emptyBlockLightMask |= (1L << i);
+            // Секции 0 и 33 — технические границы мира, основные игровые секции лежат с 1 по 24
+            int sectionIdx = i - 1;
+            if (sectionIdx >= 0 && sectionIdx < 24 && blockLightSections[sectionIdx] != null) {
+                blockLightMask |= (1L << i);
+                blockLightArraysCount++;
+            } else {
+                emptyBlockLightMask |= (1L << i);
+            }
         }
 
-        // Записываем BitSet'ы в буфер (в Майнкрафте BitSet — это VarInt длины массива лонгов + сами лонги)
         writeMinecraftBitSet(out, skyLightMask);
         writeMinecraftBitSet(out, blockLightMask);
         writeMinecraftBitSet(out, emptySkyLightMask);
         writeMinecraftBitSet(out, emptyBlockLightMask);
 
-        // --- 1. Пишем массивы SKY LIGHT ---
-        // Так как в skyLightMask у нас горит 34 бита, мы ОБЯЗАНЫ отправить ровно 34 массива
-        writeVarInt(out, 34); // Количество массивов
-
+        // --- 1. Пишем массивы SKY LIGHT (34 секции) ---
+        writeVarInt(out, 34);
         byte[] fullSkyLight = new byte[2048];
-        Arrays.fill(fullSkyLight, (byte) 0xFF); // Максимальное солнце (15 уровень света для всех блоков)
-
+//        Arrays.fill(fullSkyLight, (byte) 0xFF);
+        Arrays.fill(fullSkyLight, (byte) 0x00); // 0 — полная темнота
         for (int i = 0; i < 34; i++) {
-            writeVarInt(out, 2048); // Длина массива (Prefixed Array)
+            writeVarInt(out, 2048);
             out.writeBytes(fullSkyLight);
         }
 
         // --- 2. Пишем массивы BLOCK LIGHT ---
-        // Так как blockLightMask пустая (мы использовали emptyBlockLightMask), слать массивы не нужно!
-        writeVarInt(out, 0); // 0 массивов блоков
+        writeVarInt(out, blockLightArraysCount);
+        for (int i = 0; i < 34; i++) {
+            int sectionIdx = i - 1;
+            if (sectionIdx >= 0 && sectionIdx < 24 && blockLightSections[sectionIdx] != null) {
+                writeVarInt(out, 2048);
+                out.writeBytes(blockLightSections[sectionIdx]);
+            }
+        }
     }
 
-    /**
-     * Утилита для записи маски в формате BitSet Майнкрафта
-     */
     private void writeMinecraftBitSet(ByteBuf out, long mask) {
         if (mask == 0) {
-            writeVarInt(out, 0); // Длина массива лонгов = 0
+            writeVarInt(out, 0);
         } else {
-            writeVarInt(out, 1); // Нам хватает одного лонга, чтобы уместить 34 бита
+            writeVarInt(out, 1);
             out.writeLong(mask);
         }
     }
@@ -80,14 +88,9 @@ public class ClientboundChunkLightUpdate implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
-        if (protocolVersion >= 773) {
-            return 0x2F;
-        } else if (protocolVersion >= 770) {
-            return 0x2A;
-        } else if (protocolVersion <= 767) {
-            return 0x2A;
-        } else {
-            return 0x2B;
-        }
+        if (protocolVersion >= 773) return 0x2F;
+        else if (protocolVersion >= 770) return 0x2A;
+        else if (protocolVersion <= 767) return 0x2A;
+        else return 0x2B;
     }
 }

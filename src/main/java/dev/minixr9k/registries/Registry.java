@@ -29,6 +29,27 @@ public class Registry {
         }
     }
 
+    public static String getName(int findId, RegistryType registryType, int protocolVersion) {
+        return getName(findId, registryType, protocolVersion, "minecraft:air");
+    }
+
+    public static String getName(int findId, RegistryType registryType, int protocolVersion, String fallback) {
+        String detectedVersion = VersionUtils.getVersion(protocolVersion);
+
+        try (InputStream is = Registry.class.getResourceAsStream(
+                String.format("/registries/%s/registries.json", detectedVersion)
+        )) {
+            if (is == null) return fallback;
+
+            try (JsonReader reader = new JsonReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                return findNameInStream(reader, findId, registryType.getIdentifier(), fallback);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return fallback;
+        }
+    }
+
     private static int findIdInStream(JsonReader reader, String findValue, String registryName) throws Exception {
         int fallback = -1;
 
@@ -72,6 +93,70 @@ public class Registry {
         reader.endObject();
 
         return fallback;
+    }
+
+    private static String findNameInStream(JsonReader reader, int findId, String registryName, String fallback) throws Exception {
+        String defaultName = fallback;
+
+        reader.beginObject();
+        while (reader.hasNext()) {
+            String name = reader.nextName();
+            if (name.equals(registryName)) {
+                reader.beginObject();
+
+                String defaultObj = null;
+
+                while (reader.hasNext()) {
+                    String subName = reader.nextName();
+
+                    if (subName.equals("default")) {
+                        defaultObj = reader.nextString();
+                    } else if (subName.equals("entries")) {
+                        reader.beginObject();
+                        while (reader.hasNext()) {
+                            String objectName = reader.nextName();
+
+                            Integer id = peekProtocolId(reader);
+                            if (id == null) continue;
+
+                            if (id == findId) {
+                                return objectName;
+                            }
+                        }
+                        reader.endObject();
+
+                        if (defaultObj != null) {
+                            defaultName = defaultObj;
+                        }
+                    } else {
+                        reader.skipValue();
+                    }
+                }
+                reader.endObject();
+
+                return defaultName;
+            } else {
+                reader.skipValue();
+            }
+        }
+        reader.endObject();
+
+        return defaultName;
+    }
+
+    private static Integer peekProtocolId(JsonReader reader) throws IOException {
+        Integer id = null;
+        reader.beginObject();
+        while (reader.hasNext()) {
+            String prop = reader.nextName();
+            if (prop.equals("protocol_id")) {
+                id = reader.nextInt();
+            } else {
+                reader.skipValue();
+            }
+        }
+        reader.endObject();
+        return id;
     }
 
     private static int readProtocolId(JsonReader reader) throws IOException {

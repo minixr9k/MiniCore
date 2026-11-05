@@ -13,15 +13,14 @@ import java.util.Map;
 
 public class ZRegionChunkManager {
 
-    private static final int REGION_SIZE = 32; // Регион состоит из 32x32 чанков
-    private static final int CHUNKS_PER_REGION = REGION_SIZE * REGION_SIZE; // 1024
+    private static final int REGION_SIZE = 32;
+    private static final int CHUNKS_PER_REGION = REGION_SIZE * REGION_SIZE;
 
     public static void saveWorld(Map<String, Chunk> chunks, File saveDir) throws IOException {
         if (!saveDir.exists()) {
             saveDir.mkdirs();
         }
 
-        // Группируем чанки по файлам регионов. Координаты региона: rx = cx >> 5, rz = cz >> 5
         Map<String, Map<String, Chunk>> regionsMap = new HashMap<>();
 
         for (Chunk chunk : chunks.values()) {
@@ -33,7 +32,6 @@ public class ZRegionChunkManager {
                     .put(chunk.getX() + "," + chunk.getZ(), chunk);
         }
 
-        // Сохраняем каждый регион отдельно
         for (Map.Entry<String, Map<String, Chunk>> entry : regionsMap.entrySet()) {
             String[] parts = entry.getKey().split(",");
             int rx = Integer.parseInt(parts[0]);
@@ -45,9 +43,7 @@ public class ZRegionChunkManager {
     }
 
     private static void saveRegion(File file, int rx, int rz, Map<String, Chunk> regionChunks) throws IOException {
-        // Выделяем буфер для заголовка (1024 чанка * 4 байта под смещение = 4096 байт)
         ByteBuf headerBuf = Unpooled.buffer(CHUNKS_PER_REGION * 4);
-        // Буфер для сырых несжатых данных чанков
         ByteBuf uncompressedDataBuf = Unpooled.buffer();
 
         int[] offsets = new int[CHUNKS_PER_REGION];
@@ -55,7 +51,6 @@ public class ZRegionChunkManager {
         try {
             int currentOffset = 0;
 
-            // Обходим сетку 32x32
             for (int cz = 0; cz < REGION_SIZE; cz++) {
                 for (int cx = 0; cx < REGION_SIZE; cx++) {
                     int globalCX = (rx << 5) + cx;
@@ -65,54 +60,59 @@ public class ZRegionChunkManager {
                     Chunk chunk = regionChunks.get(globalCX + "," + globalCZ);
 
                     if (chunk == null) {
-                        offsets[index] = -1; // Чанка нет
+                        offsets[index] = -1;
                         continue;
                     }
 
-                    // Фиксируем текущее смещение в буфере несжатых данных
                     offsets[index] = currentOffset;
-
-                    // Пишем чанк в uncompressedDataBuf
                     int startIdx = uncompressedDataBuf.writerIndex();
 
                     uncompressedDataBuf.writeInt(chunk.getX());
                     uncompressedDataBuf.writeInt(chunk.getZ());
                     uncompressedDataBuf.writeBoolean(chunk.isEmpty());
 
+                    // 1. Сохраняем блоки секций
                     short[][] sections = chunk.getSections();
                     for (int i = 0; i < 24; i++) {
                         short[] section = sections[i];
                         if (section == null) {
-                            uncompressedDataBuf.writeBoolean(false); // Секция пуста
+                            uncompressedDataBuf.writeBoolean(false);
                         } else {
-                            uncompressedDataBuf.writeBoolean(true);  // Секция существует
+                            uncompressedDataBuf.writeBoolean(true);
                             for (short block : section) {
-                                uncompressedDataBuf.writeShort(block); // 4096 блоков * 2 байта
+                                uncompressedDataBuf.writeShort(block);
                             }
                         }
                     }
 
-                    // Вычисляем, сколько байт занял этот чанк
+                    // 2. Сохраняем свет секций (Block Light)
+                    byte[][] blockLightSections = chunk.getBlockLightSections();
+                    for (int i = 0; i < 24; i++) {
+                        byte[] lightSec = blockLightSections[i];
+                        if (lightSec == null) {
+                            uncompressedDataBuf.writeBoolean(false);
+                        } else {
+                            uncompressedDataBuf.writeBoolean(true);
+                            uncompressedDataBuf.writeBytes(lightSec);
+                        }
+                    }
+
                     currentOffset += (uncompressedDataBuf.writerIndex() - startIdx);
                 }
             }
 
-            // Заполняем заголовок смещениями
             for (int offset : offsets) {
                 headerBuf.writeInt(offset);
             }
 
-            // Переводим ByteBuf в обычные массивы байт для сжатия Zstandard
             byte[] headerBytes = new byte[headerBuf.readableBytes()];
             headerBuf.readBytes(headerBytes);
 
             byte[] uncompressedBytes = new byte[uncompressedDataBuf.readableBytes()];
             uncompressedDataBuf.readBytes(uncompressedBytes);
 
-            // Сжимаем данные блоков с помощью Zstd (level 3 — баланс скорости и сжатия)
             byte[] compressedBytes = Zstd.compress(uncompressedBytes, 3);
 
-            // Склеиваем заголовок и сжатые данные в один итоговый файл
             byte[] finalFileBytes = new byte[headerBytes.length + compressedBytes.length];
             System.arraycopy(headerBytes, 0, finalFileBytes, 0, headerBytes.length);
             System.arraycopy(compressedBytes, 0, finalFileBytes, headerBytes.length, compressedBytes.length);
@@ -126,9 +126,6 @@ public class ZRegionChunkManager {
         }
     }
 
-    /**
-     * Загружает все регионы из папки Linear обратно в ОЗУ.
-     */
     public static Map<String, Chunk> loadWorld(File saveDir) throws IOException {
         Map<String, Chunk> loadedChunks = new HashMap<>();
         if (!saveDir.exists()) return loadedChunks;
@@ -149,10 +146,9 @@ public class ZRegionChunkManager {
         byte[] fileBytes = Files.readAllBytes(file.toPath());
 
         if (fileBytes.length < 4096) {
-            throw new IOException("Файл Linear региона слишком мал или поврежден: " + file.getName());
+            throw new IOException("Файл ZRegion региона слишком мал или поврежден: " + file.getName());
         }
 
-        // 1. Извлекаем заголовок (первые 4096 байт)
         ByteBuf headerBuf = Unpooled.wrappedBuffer(fileBytes, 0, 4096);
         int[] offsets = new int[CHUNKS_PER_REGION];
         for (int i = 0; i < CHUNKS_PER_REGION; i++) {
@@ -160,23 +156,19 @@ public class ZRegionChunkManager {
         }
         headerBuf.release();
 
-        // 2. Распаковываем оставшуюся сжатую ZSTD-часть
         byte[] compressedBytes = new byte[fileBytes.length - 4096];
         System.arraycopy(fileBytes, 4096, compressedBytes, 0, compressedBytes.length);
 
-        // Узнаем размер оригинальных данных и декомпрессируем
         long decompressedSize = Zstd.decompressedSize(compressedBytes);
         byte[] uncompressedBytes = Zstd.decompress(compressedBytes, (int) decompressedSize);
 
         ByteBuf uncompressedBuf = Unpooled.wrappedBuffer(uncompressedBytes);
 
         try {
-            // 3. Восстанавливаем чанки по смещениям
             for (int i = 0; i < CHUNKS_PER_REGION; i++) {
                 int offset = offsets[i];
-                if (offset == -1) continue; // Этого чанка не было на диске
+                if (offset == -1) continue;
 
-                // Прыгаем на смещение чанка в буфере
                 uncompressedBuf.readerIndex(offset);
 
                 int cx = uncompressedBuf.readInt();
@@ -185,7 +177,7 @@ public class ZRegionChunkManager {
 
                 Chunk chunk = new Chunk(cx, cz, isEmpty);
 
-                // Загружаем секции
+                // 1. Загружаем блоки секций
                 short[][] sections = chunk.getSections();
                 for (int s = 0; s < 24; s++) {
                     boolean hasSection = uncompressedBuf.readBoolean();
@@ -197,6 +189,19 @@ public class ZRegionChunkManager {
                         sections[s] = sectionBlocks;
                     } else {
                         sections[s] = null;
+                    }
+                }
+
+                // 2. Загружаем свет секций (Block Light)
+                byte[][] blockLightSections = chunk.getBlockLightSections();
+                for (int s = 0; s < 24; s++) {
+                    boolean hasLightSection = uncompressedBuf.readBoolean();
+                    if (hasLightSection) {
+                        byte[] lightSec = new byte[2048];
+                        uncompressedBuf.readBytes(lightSec);
+                        blockLightSections[s] = lightSec;
+                    } else {
+                        blockLightSections[s] = null;
                     }
                 }
 

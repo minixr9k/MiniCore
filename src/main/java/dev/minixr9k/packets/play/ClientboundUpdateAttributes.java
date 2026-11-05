@@ -38,6 +38,8 @@ public class ClientboundUpdateAttributes implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x81;
         return 0x7C;
     }
 }

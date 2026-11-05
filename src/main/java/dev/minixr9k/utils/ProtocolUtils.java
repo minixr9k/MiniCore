@@ -40,6 +40,30 @@ public class ProtocolUtils {
         out.writeByte(value);
     }
 
+    public static void writeVarLong(ByteBuf out, long value) {
+        while ((value & ~0x7FL) != 0) {
+            out.writeByte((int)((value & 0x7F) | 0x80));
+            value >>>= 7;
+        }
+        out.writeByte((int)value);
+    }
+
+    public static long readVarLong(ByteBuf buf) {
+        long value = 0;
+
+        for (int position = 0; position < 64; position += 7) {
+            byte currentByte = buf.readByte();
+
+            value |= (long)(currentByte & 0x7F) << position;
+
+            if ((currentByte & 0x80) == 0) {
+                return value;
+            }
+        }
+
+        throw new RuntimeException("VarLong is too big");
+    }
+
     public static void writeNBTString(ByteBuf buf, String value) {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
         buf.writeShort(bytes.length);

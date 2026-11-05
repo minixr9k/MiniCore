@@ -60,6 +60,7 @@ public class JConfig {
 
     public static class FeaturesConf {
         public boolean acceptTransfers = true;
+        public boolean lightEngine = false;
         public boolean worldVoid = true;
         public boolean debug = false;
         public boolean logCommands = true;

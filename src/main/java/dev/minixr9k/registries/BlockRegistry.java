@@ -1,6 +1,9 @@
 package dev.minixr9k.registries;
 
 import com.google.gson.stream.JsonReader;
+import dev.minixr9k.config.Configuration;
+import dev.minixr9k.utils.VersionUtils;
+
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -16,7 +19,9 @@ public class BlockRegistry {
     public static void initialize() {
         if (isInitialized) return;
 
-        String fileName = "/blocks/blocks1.21.8.json";
+        int version = Configuration.get().features.mainProtocol;
+
+        String fileName = "/registries/" + VersionUtils.getVersion(version) + "/blocks.json";
 
         try (InputStream is = BlockRegistry.class.getResourceAsStream(fileName)) {
             if (is == null) throw new RuntimeException("Файл не найден: " + fileName);

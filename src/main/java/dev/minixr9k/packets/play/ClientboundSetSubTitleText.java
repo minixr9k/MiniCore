@@ -25,6 +25,8 @@ public class ClientboundSetSubTitleText implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x6E;
         return 0x69;
     }
 }

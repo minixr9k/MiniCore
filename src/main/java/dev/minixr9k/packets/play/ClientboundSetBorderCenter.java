@@ -26,6 +26,8 @@ public class ClientboundSetBorderCenter implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x56;
         return 0x51;
     }
 }

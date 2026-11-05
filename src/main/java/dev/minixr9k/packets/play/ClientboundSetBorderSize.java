@@ -23,6 +23,8 @@ public class ClientboundSetBorderSize implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x58;
         return 0x53;
     }
 }

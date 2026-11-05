@@ -16,6 +16,8 @@ public class ClientboundClearDialog implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x89;
         return 0x84;
     }
 }

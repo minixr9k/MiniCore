@@ -26,6 +26,8 @@ public class ClientboundUnloadChunk implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x25;
         return 0x21;
     }
 }

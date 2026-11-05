@@ -73,6 +73,8 @@ public class ClientboundSound implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x73;
         return 0x6E;
     }
 }

@@ -3,6 +3,9 @@ package dev.minixr9k.packets.play;
 import dev.minixr9k.utils.MinecraftPacket;
 import io.netty.buffer.ByteBuf;
 
+import static dev.minixr9k.utils.ProtocolUtils.writeVarInt;
+import static dev.minixr9k.utils.ProtocolUtils.writeVarLong;
+
 public class ClientboundUpdateTime implements MinecraftPacket {
 
     private final long worldAge;
@@ -17,7 +20,6 @@ public class ClientboundUpdateTime implements MinecraftPacket {
 
     @Override
     public void write(ByteBuf out, int protocolVersion) {
-        // TODO 1.21.11+ format
         out.writeLong(worldAge);
         out.writeLong(time);
         out.writeBoolean(isTimeIncreasing);
@@ -30,7 +32,7 @@ public class ClientboundUpdateTime implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
-        if (protocolVersion == 773)
+        if (protocolVersion >= 773)
             return 0x6F;
         return 0x6A;
     }

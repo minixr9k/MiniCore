@@ -2,8 +2,10 @@ package dev.minixr9k.features;
 
 import dev.minixr9k.MiniCore;
 import dev.minixr9k.chunk.Chunk;
+import dev.minixr9k.chunk.LightEngine;
 import dev.minixr9k.chunk.ZRegionChunkManager;
 import dev.minixr9k.auth.PlayerProfile;
+import dev.minixr9k.config.Configuration;
 import dev.minixr9k.packets.beta.play.*;
 import dev.minixr9k.packets.play.*;
 import dev.minixr9k.registries.BlockRegistry;
@@ -261,6 +263,8 @@ public class World {
         Chunk chunk = getChunkAt(chunkX, chunkZ);
         if (chunk != null) {
             chunk.setBlockAt(x, y, z, (short) 0);
+
+//            LightEngine.recalculateAreaLight(chunkX, chunkZ);
         }
 
         for (Player p : players) {
@@ -321,23 +325,7 @@ public class World {
 
     public static void placeBlock(int x, int y, int z, String material) {
         int blockId = BlockRegistry.getBlock(material, 772);
-        if (blockId == -1) return;
-
-        int chunkX = x >> 4;
-        int chunkZ = z >> 4;
-
-        Chunk chunk = getChunkAt(chunkX, chunkZ);
-        if (chunk != null) {
-            chunk.setBlockAt(x, y, z, (short) blockId);
-        }
-
-        for (Player p : players) {
-            if (p.getProtocolVersion() < 99) {
-                new BlockChange53Packet(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
-                continue;
-            }
-            new ClientboundBlockUpdate(x, y, z, blockId).send(p.getCtx(), p.getProtocolVersion(), p);
-        }
+        placeBlock(x, y, z, blockId);
     }
 
     public static void placeBlock(int x, int y, int z, int blockId) {
@@ -349,6 +337,8 @@ public class World {
         Chunk chunk = getChunkAt(chunkX, chunkZ);
         if (chunk != null) {
             chunk.setBlockAt(x, y, z, (short) blockId);
+
+//            LightEngine.recalculateBlockLight(chunk);
         }
 
         for (Player p : players) {
@@ -550,6 +540,9 @@ public class World {
                 MiniCore.getLogger().info("[ChunkHolder] Папка сохранений найдена. Загружаем чанки...");
                 Map<String, Chunk> loaded = ZRegionChunkManager.loadWorld(WORLD_DIR);
                 chunks.putAll(loaded);
+
+                if (Configuration.get().features.lightEngine)
+                    MiniCore.getScheduler().runTaskAsync(LightEngine::recalculateEntireWorld);
             } else {
                 MiniCore.getLogger().info("[ChunkHolder] Сохранения не найдены. Генерируем новый мир...");
                 generateWorld(chunkRadius, grassRadius);

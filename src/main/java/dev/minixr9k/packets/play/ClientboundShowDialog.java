@@ -336,6 +336,8 @@ public class ClientboundShowDialog implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x8A;
         return 0x85;
     }
 }

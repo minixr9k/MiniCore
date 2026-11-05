@@ -6,10 +6,12 @@ import dev.minixr9k.api.event.PlayerSetHotbarSlotEvent;
 import dev.minixr9k.config.Configuration;
 import dev.minixr9k.features.World;
 import dev.minixr9k.registries.ItemRegistry;
+import dev.minixr9k.registries.Registry;
 import dev.minixr9k.types.CustomContainer;
 import dev.minixr9k.types.GameMode;
 import dev.minixr9k.types.ItemStack;
 import dev.minixr9k.types.Player;
+import dev.minixr9k.types.registry.RegistryType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -50,7 +52,7 @@ public class PlayerInventoryHandler {
                 boolean add = in.readBoolean(); // components to add
                 boolean rem = in.readBoolean(); // components to remove
 
-                String itemName = ItemRegistry.getItemName(itemId, player.getProtocolVersion());
+                String itemName = Registry.getName(itemId, RegistryType.ITEMS, player.getProtocolVersion());
 
                 player.getInventory().setItem(slot, new ItemStack(itemName, (short) count));
             }

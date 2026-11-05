@@ -33,6 +33,8 @@ public class ClientboundOpenScreen implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x39;
         return 0x34;
     }
 }

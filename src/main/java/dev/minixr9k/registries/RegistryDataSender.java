@@ -60,8 +60,8 @@ public class RegistryDataSender {
                 NbtUtils.writeFloat(nbtBuf, "minecraft:visual/cloud_height", 192.33f);
                 NbtUtils.writeString(nbtBuf, "minecraft:visual/fog_color", "#c0d8ff");
                 NbtUtils.writeString(nbtBuf, "minecraft:visual/sky_color", "#78a7ff");
-                NbtUtils.writeFloat(nbtBuf, "minecraft:visual/fog_start_distance", 10f);
-                NbtUtils.writeFloat(nbtBuf, "minecraft:visual/fog_end_distance", 48f);
+//                NbtUtils.writeFloat(nbtBuf, "minecraft:visual/fog_start_distance", 10f);
+//                NbtUtils.writeFloat(nbtBuf, "minecraft:visual/fog_end_distance", 48f);
 
                 NbtUtils.writeTagEnd(nbtBuf);
 

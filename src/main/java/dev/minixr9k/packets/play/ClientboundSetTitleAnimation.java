@@ -31,6 +31,8 @@ public class ClientboundSetTitleAnimation implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x71;
         return 0x6C;
     }
 }

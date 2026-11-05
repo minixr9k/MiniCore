@@ -48,6 +48,8 @@ public class ClientboundSoundEntity implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x72;
         return 0x6D;
     }
 }

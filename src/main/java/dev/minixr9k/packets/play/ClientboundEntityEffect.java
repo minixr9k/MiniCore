@@ -40,6 +40,8 @@ public class ClientboundEntityEffect implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x82;
         return 0x7D;
     }
 }

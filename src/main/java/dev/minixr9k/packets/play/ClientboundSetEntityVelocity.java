@@ -34,6 +34,8 @@ public class ClientboundSetEntityVelocity implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x63;
         return 0x5E;
     }
 }

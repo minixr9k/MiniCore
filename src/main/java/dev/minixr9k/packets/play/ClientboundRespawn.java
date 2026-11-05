@@ -47,6 +47,8 @@ public class ClientboundRespawn implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x50;
         return 0x4B;
     }
 }

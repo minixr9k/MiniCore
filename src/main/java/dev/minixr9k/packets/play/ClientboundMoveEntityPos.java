@@ -37,6 +37,8 @@ public class ClientboundMoveEntityPos implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x33;
         return 0x2E;
     }
 }

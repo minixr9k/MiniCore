@@ -25,6 +25,8 @@ public class ClientboundSetCamera implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x5B;
         return 0x56;
     }
 }

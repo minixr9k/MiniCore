@@ -43,6 +43,8 @@ public class ClientboundMoveEntityPosRot implements MinecraftPacket {
 
     @Override
     public int getPacketId(int protocolVersion) {
+        if (protocolVersion >= 774)
+            return 0x34;
         return 0x2F;
     }
 }

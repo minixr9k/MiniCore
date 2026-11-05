@@ -91,7 +91,23 @@ public class ClientboundLinearChunkWithLight implements MinecraftPacket {
         }
 
         // Block entities
-        writeVarInt(out, 0);
+        List<BlockEntityData> blockEntities = collectBlockEntities(chunk);
+        writeVarInt(out, blockEntities.size());
+
+        for (BlockEntityData be : blockEntities) {
+            // Упаковываем X (4 бита) и Z (4 бита) в один байт, а Y (short) отдельно
+            int xz = ((be.localX & 0xF) << 4) | (be.localZ & 0xF);
+            out.writeByte(xz);
+            out.writeShort(be.worldY);
+
+            // ID типа блок-сущности в реестре (например, сундук = 7 или в зависимости от версии версий)
+            // Для совместимости можно использовать VarInt ID типа сундука
+            writeVarInt(out, be.typeId);
+
+            // NBT данные (для сундуков обычно достаточно пустого CompoundTag: 0x0A, затем 0x00 для закрытия)
+            out.writeByte(0x0A); // TAG_Compound открытие
+            out.writeByte(0x00); // Конец тега
+        }
 
         // Light (упрощённо)
         for (int i = 0; i < 4; i++) {
@@ -100,6 +116,55 @@ public class ClientboundLinearChunkWithLight implements MinecraftPacket {
         }
         writeVarInt(out, 0); // Sky light arrays
         writeVarInt(out, 0); // Block light arrays
+    }
+
+    private record BlockEntityData(int localX, int worldY, int localZ, int typeId) {}
+
+    private List<BlockEntityData> collectBlockEntities(Chunk chunk) {
+        List<BlockEntityData> list = new ArrayList<>();
+        short[][] sections = chunk.getSections();
+
+        for (int s = 0; s < sections.length; s++) {
+            short[] section = sections[s];
+            if (section == null) continue;
+            int sectionWorldY = (s * 16) - 64;
+
+            for (int localY = 0; localY < 16; localY++) {
+                for (int localZ = 0; localZ < 16; localZ++) {
+                    for (int localX = 0; localX < 16; localX++) {
+                        int index = (localY << 8) | (localZ << 4) | localX;
+                        short blockId = (short) (section[index] & 0xFFFF);
+
+                        // Получаем строковое имя блока через BlockRegistry
+                        String name = dev.minixr9k.registries.BlockRegistry.getBlockName(blockId, 763);
+                        if (name == null) continue;
+
+                        int typeId = -1;
+
+                        // Сундуки и печки
+                        if ((name.contains("chest") && !name.contains("ender_chest")) ||
+                                name.contains("ender_chest") ||
+                                name.contains("furnace")) {
+                            typeId = 7;
+                        }
+                        // Все виды табличек (обычные, настенные, висячие и т.д.)
+                        else if (name.contains("sign") || name.contains("hanging_sign")) {
+                            typeId = 7;
+                        }
+                        // Все виды флагов / баннеров (баннеры на полу и на стенах)
+                        else if (name.contains("banner")) {
+                            typeId = 7;
+                        }
+
+                        if (typeId != -1) {
+                            int worldY = sectionWorldY + localY;
+                            list.add(new BlockEntityData(localX, worldY, localZ, typeId));
+                        }
+                    }
+                }
+            }
+        }
+        return list;
     }
 
     @Override

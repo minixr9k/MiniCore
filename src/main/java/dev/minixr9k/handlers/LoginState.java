@@ -17,6 +17,7 @@ import dev.minixr9k.types.Player;
 import dev.minixr9k.utils.MinecraftPacket;
 import dev.minixr9k.utils.ProtocolUtils;
 import dev.minixr9k.utils.VelocityForwarding;
+import dev.minixr9k.utils.VersionUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -44,7 +45,9 @@ public class LoginState extends SimpleChannelInboundHandler<ByteBuf> {
         if (protocolVersion != Configuration.get().features.mainProtocol) {
             if (Configuration.get().features.debug)
                 MiniCore.getLogger().info("[Core/Login] подключение с версией протокола " + protocolVersion);
-            new ClientboundLoginDisconnect("Для подключения используйте версию 1.21.8").send(ctx, protocolVersion);
+
+            String required = VersionUtils.getVersion(Configuration.get().features.mainProtocol);
+            new ClientboundLoginDisconnect("Для подключения используйте версию " + required.replace("_", ".")).send(ctx, protocolVersion);
             ctx.close();
         }
     }
